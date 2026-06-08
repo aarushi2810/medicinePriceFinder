@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 
 
-
+import PrescriptionOCR from '../components/PrescriptionOCR';
 
 import { useNavigate } from 'react-router-dom';
 import { searchMedicines } from '../api';
 
 export default function Search() {
+
+  const [ocrResults, setOcrResults] = useState([]);
   const [query,    setQuery]    = useState('');
   const [results,  setResults]  = useState([]);
   const [loading,  setLoading]  = useState(false);
@@ -17,6 +19,17 @@ export default function Search() {
 
   const navigate  = useNavigate();
   const wrapRef   = useRef();
+
+  const handleOcrResults = (medicines) => {
+    if (medicines.length === 1) {
+      // Single medicine — search directly
+      setQuery(`${medicines[0].name} ${medicines[0].dosage}`);
+    } else {
+      // Multiple — show all as chips for user to pick
+      setOcrResults(medicines);
+    }
+  };
+  
 
   // Debounced search — 300ms
   useEffect(() => {
@@ -95,7 +108,32 @@ export default function Search() {
             autoFocus
           />
           {loading && <Spinner />}
+
+
+
         </div>
+
+
+        <PrescriptionOCR onMedicinesFound={handleOcrResults} />
+
+{ocrResults.length > 1 && (
+  <div style={{ marginTop: 12, padding: 12, background: '#f9fffe',
+                borderRadius: 8, border: '1px solid #E1F5EE' }}>
+    <p style={{ fontSize: 13, color: '#085041', marginBottom: 8, fontWeight: 500 }}>
+      Found {ocrResults.length} medicines in prescription:
+    </p>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {ocrResults.map((m, i) => (
+        <button key={i}
+          onClick={() => { setQuery(`${m.name} ${m.dosage}`); setOcrResults([]); }}
+          style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid #1D9E75',
+                   background: '#E1F5EE', color: '#085041', fontSize: 13, cursor: 'pointer' }}>
+          {m.name} {m.dosage}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
 
         {/* Dropdown */}
         {open && results.length > 0 && (

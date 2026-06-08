@@ -199,4 +199,44 @@ router.get('/stats', async (req, res) => {
 });
 
 
+
+// GET /api/pharmacies/nearby?lat=30.33&lng=76.38&radius=5
+router.get('/nearby', async (req, res) => {
+  const { lat, lng, radius = 5 } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat and lng required' });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT
+        ph.id,
+        ph.name,
+        ph.address,
+        ph.lat,
+        ph.lng,
+        (6371 * acos(
+          cos(radians($1)) * cos(radians(ph.lat)) *
+          cos(radians(ph.lng) - radians($2)) +
+          sin(radians($1)) * sin(radians(ph.lat))
+        )) AS distance_km
+      FROM pharmacies ph
+      WHERE
+        ph.type = 'local'
+        AND ph.lat IS NOT NULL
+        AND ph.lng IS NOT NULL
+      HAVING distance_km < $3
+      ORDER BY distance_km ASC
+      LIMIT 20
+    `, [lat, lng, radius]);
+
+    res.json({ pharmacies: result.rows });
+  } catch (err) {
+    console.error('Nearby error:', err.message);
+    res.status(500).json({ error: 'Nearby search failed' });
+  }
+});
+
+
 module.exports = router;

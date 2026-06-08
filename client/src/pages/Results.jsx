@@ -1,28 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { comparePrices, getGenerics } from '../api';
-
-// ─── Helpers ────
-
+import { comparePrices, getGenerics, explainPrice } from '../api';
+import NearbyMap from '../components/NearbyMap';
+ 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+ 
 function cleanMedicineName(name) {
-  if (!name) return 'Unknown';
+  if (!name) return null;
   const isCompany = /pvt|ltd|m\/s|limited|pharma|laboratories|industries|corporation/i.test(name);
-  if (isCompany) return null; // will fall back to salt name
-  return name;
+  return isCompany ? null : name;
 }
-
+ 
 function shortDosage(dosage) {
   if (!dosage) return '';
   const cleaned = dosage.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
   return cleaned.length > 70 ? cleaned.slice(0, 70) + '…' : cleaned;
 }
-
+ 
 function formatPrice(val) {
-  return parseFloat(val).toFixed(2);
+  return parseFloat(val || 0).toFixed(2);
 }
-
-// ─── Main page ───
-
+ 
+// ─── Main Results page ────────────────────────────────────────────────────────
+ 
 export default function Results() {
   const { id }     = useParams();
   const navigate   = useNavigate();
@@ -30,12 +30,13 @@ export default function Results() {
   const [generics, setGenerics] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
-
+ 
   useEffect(() => {
     setLoading(true);
     setData(null);
     setGenerics([]);
-
+    setError('');
+ 
     Promise.all([comparePrices(id), getGenerics(id)])
       .then(([compareData, genericsData]) => {
         setData(compareData);
@@ -44,21 +45,27 @@ export default function Results() {
       .catch(() => setError('Failed to load prices. Try searching again.'))
       .finally(() => setLoading(false));
   }, [id]);
-
+ 
   if (loading) return <LoadingState />;
   if (error)   return <ErrorState msg={error} onBack={() => navigate('/')} />;
   if (!data)   return null;
-
+ 
   const { medicine, prices, summary } = data;
-
-  // Display name: prefer a clean brand name, fall back to salt name
-  const displayName = cleanMedicineName(medicine.brand_name) || medicine.salt_name?.split(' ').slice(0, 4).join(' ') || medicine.brand_name;
+ 
+  const displayName  = cleanMedicineName(medicine.brand_name)
+    || medicine.salt_name?.split(' ').slice(0, 4).join(' ')
+    || medicine.brand_name;
   const isCompanyName = !cleanMedicineName(medicine.brand_name);
-
+ 
+  const cheapestPrice = summary?.cheapest_price || 0;
+  const avgPrice      = prices.length
+    ? (prices.reduce((s, p) => s + parseFloat(p.price), 0) / prices.length).toFixed(2)
+    : null;
+ 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px' }}>
-
-      {/* Back button */}
+ 
+      {/* Back */}
       <button
         onClick={() => navigate('/')}
         style={{
@@ -69,7 +76,7 @@ export default function Results() {
       >
         ← Back to search
       </button>
-
+ 
       {/* Medicine header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, color: '#111', margin: '0 0 6px', lineHeight: 1.3 }}>
@@ -88,20 +95,22 @@ export default function Results() {
           )}
         </p>
       </div>
-
+ 
       {/* Summary stats */}
       {summary && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
           gap: 1, marginBottom: 28,
-          border: '1px solid #eee', borderRadius: 12, overflow: 'hidden',
-          background: '#eee',
+          border: '1px solid #eee', borderRadius: 12,
+          overflow: 'hidden', background: '#eee',
         }}>
-          <StatBox label="Cheapest"     value={`₹${formatPrice(summary.cheapest_price)}`}  color="#1D9E75" />
+          <StatBox label="Cheapest"       value={`₹${formatPrice(summary.cheapest_price)}`} color="#1D9E75" />
           <StatBox label="Most expensive" value={`₹${formatPrice(summary.most_expensive)}`} />
-          <StatBox label="Max savings"  value={`₹${formatPrice(summary.max_savings)}`}     color={parseFloat(summary.max_savings) > 0 ? '#1D9E75' : '#111'} />
-          <StatBox label="NPPA ceiling" value={summary.nppa_ceiling ? `₹${formatPrice(summary.nppa_ceiling)}/unit` : '—'} />
+          <StatBox label="Max savings"    value={`₹${formatPrice(summary.max_savings)}`}
+            color={parseFloat(summary.max_savings) > 0 ? '#1D9E75' : '#111'} />
+          <StatBox label="NPPA ceiling"
+            value={summary.nppa_ceiling ? `₹${formatPrice(summary.nppa_ceiling)}/unit` : '—'} />
           {summary.nppa_breach_count > 0 && (
             <StatBox
               label="Overcharging"
@@ -111,7 +120,7 @@ export default function Results() {
           )}
         </div>
       )}
-
+ 
       {/* NPPA breach banner */}
       {summary?.nppa_breach_count > 0 && (
         <div style={{
@@ -125,17 +134,19 @@ export default function Results() {
               NPPA ceiling exceeded
             </p>
             <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>
-              {summary.nppa_breach_count} pharmacy / pharmacies is selling above the government's
-              legal ceiling of ₹{formatPrice(summary.nppa_ceiling)} per unit.
-              You can report this to NPPA at nppaindia.nic.in.
+              {summary.nppa_breach_count} pharmacy selling above the government ceiling of
+              ₹{formatPrice(summary.nppa_ceiling)} per unit. Report at nppaindia.nic.in.
             </p>
           </div>
         </div>
       )}
-
-      {/* Price cards */}
+ 
+      {/* Price comparison */}
       <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'baseline', marginBottom: 12,
+        }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111', margin: 0 }}>
             Price comparison
           </h2>
@@ -143,23 +154,30 @@ export default function Results() {
             {prices.length} {prices.length === 1 ? 'source' : 'sources'} · sorted cheapest first
           </span>
         </div>
-
+ 
         {prices.length === 0 ? (
           <EmptyPrices />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {prices.map((p, i) => (
-              <PriceCard key={`${p.pharmacy_id}-${i}`} price={p} isCheapest={i === 0} />
+              <PriceCard
+                key={`${p.pharmacy_id}-${i}`}
+                price={p}
+                isCheapest={i === 0}
+                medicine={medicine}
+                cheapestPrice={cheapestPrice}
+                avgPrice={avgPrice}
+              />
             ))}
           </div>
         )}
       </div>
-
+ 
       {/* Generic alternatives */}
       {generics.length > 0 && (
         <div style={{
           border: '1px solid #d4edda', borderRadius: 12,
-          padding: '20px', background: '#f9fffe',
+          padding: '20px', background: '#f9fffe', marginBottom: 32,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 20 }}>💡</span>
@@ -168,24 +186,29 @@ export default function Results() {
             </h2>
           </div>
           <p style={{ fontSize: 13, color: '#666', margin: '0 0 14px 28px' }}>
-            These contain the same active ingredient — medically equivalent alternatives
+            Same active ingredient — medically equivalent alternatives
           </p>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {generics.slice(0, 6).map(g => (
-              <GenericCard key={g.id} generic={g} onClick={() => navigate(`/results/${g.id}`)} />
+              <GenericCard
+                key={g.id}
+                generic={g}
+                onClick={() => navigate(`/results/${g.id}`)}
+              />
             ))}
           </div>
-
           {generics.length > 6 && (
             <p style={{ fontSize: 12, color: '#aaa', marginTop: 10, textAlign: 'center' }}>
-              + {generics.length - 6} more alternatives available
+              + {generics.length - 6} more alternatives
             </p>
           )}
         </div>
       )}
-
-      {/* Share */}
+ 
+      {/* Nearby map */}
+      <NearbyMap medicineName={displayName} />
+ 
+      {/* WhatsApp share */}
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #eee' }}>
         <button
           onClick={() => {
@@ -196,100 +219,148 @@ export default function Results() {
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 20px', borderRadius: 8,
             background: '#25D366', color: '#fff',
-            border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
+            border: 'none', cursor: 'pointer',
+            fontSize: 14, fontWeight: 500,
           }}
         >
           <span>📤</span> Share on WhatsApp
         </button>
       </div>
-
+ 
     </div>
   );
 }
-
-// ─── Sub-components ───
-
-function PriceCard({ price, isCheapest }) {
+ 
+// ─── PriceCard ────────────────────────────────────────────────────────────────
+ 
+function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
+  const [explanation, setExplanation] = useState('');
+  const [explaining,  setExplaining]  = useState(false);
   const isOnline = price.pharmacy_type === 'online';
   const breach   = price.nppa_breach;
-
+ 
+  const handleExplain = async () => {
+    setExplaining(true);
+    try {
+      const data = await explainPrice({
+        medicine:      `${medicine?.brand_name} ${medicine?.dosage}`,
+        pharmacy:      price.pharmacy_name,
+        price:         price.price,
+        cheapestPrice,
+        nppaCeiling:   medicine?.nppa_ceiling_price,
+        avgPrice,
+      });
+      setExplanation(data.explanation);
+    } catch {
+      setExplanation('Could not generate explanation right now.');
+    } finally {
+      setExplaining(false);
+    }
+  };
+ 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center',
-      justifyContent: 'space-between',
       padding: '14px 18px', borderRadius: 10,
       border: `1.5px solid ${isCheapest ? '#1D9E75' : breach ? '#fde8e8' : '#eee'}`,
       background: isCheapest ? '#f9fffe' : breach ? '#fffafa' : '#fff',
-      transition: 'box-shadow 0.15s',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Icon */}
-        <div style={{
-          width: 38, height: 38, borderRadius: 9,
-          background: isCheapest ? '#E1F5EE' : '#f5f5f5',
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 18, flexShrink: 0,
-        }}>
-          {isOnline ? '🌐' : '🏥'}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+ 
+        {/* Left: icon + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 9,
+            background: isCheapest ? '#E1F5EE' : '#f5f5f5',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: 18, flexShrink: 0,
+          }}>
+            {isOnline ? '🌐' : '🏥'}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5 }}>
+              <span style={{ fontWeight: 500, fontSize: 15, color: '#111' }}>
+                {price.pharmacy_name}
+              </span>
+              {isCheapest && <Pill text="Cheapest ✓" color="#085041" bg="#E1F5EE" />}
+              {breach      && <Pill text="⚠️ Above NPPA" color="#A32D2D" bg="#fde8e8" />}
+            </div>
+            <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>
+              {price.in_stock ? '✓ In stock' : '✗ Out of stock'}
+              {price.discount_pct > 0 && ` · ${price.discount_pct}% off MRP`}
+              {price.updated_at && ` · ${new Date(price.updated_at).toLocaleDateString('en-IN')}`}
+            </div>
+          </div>
         </div>
-
-        {/* Name + badges */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5 }}>
-            <span style={{ fontWeight: 500, fontSize: 15, color: '#111' }}>
-              {price.pharmacy_name}
-            </span>
-            {isCheapest && <Pill text="Cheapest ✓" color="#085041" bg="#E1F5EE" />}
-            {breach      && <Pill text="⚠️ Above NPPA ceiling" color="#A32D2D" bg="#fde8e8" />}
+ 
+        {/* Right: price */}
+        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+          <div style={{
+            fontSize: 20, fontWeight: 700,
+            color: isCheapest ? '#1D9E75' : breach ? '#E24B4A' : '#111',
+          }}>
+            ₹{formatPrice(price.price)}
           </div>
-          <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>
-            {price.in_stock ? '✓ In stock' : '✗ Out of stock'}
-            {price.discount_pct > 0 && ` · ${price.discount_pct}% off MRP`}
-            {price.updated_at && ` · Updated ${new Date(price.updated_at).toLocaleDateString('en-IN')}`}
+          <div style={{ fontSize: 12, color: '#bbb' }}>
+            MRP ₹{formatPrice(price.mrp)}
           </div>
+          {price.vs_cheapest_pct > 0 && (
+            <div style={{ fontSize: 11, color: '#E24B4A', marginTop: 1 }}>
+              +{price.vs_cheapest_pct}% costlier
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Price */}
-      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-        <div style={{
-          fontSize: 20, fontWeight: 700,
-          color: isCheapest ? '#1D9E75' : breach ? '#E24B4A' : '#111',
-        }}>
-          ₹{formatPrice(price.price)}
-        </div>
-        <div style={{ fontSize: 12, color: '#bbb' }}>
-          MRP ₹{formatPrice(price.mrp)}
-        </div>
-        {price.vs_cheapest_pct > 0 && (
-          <div style={{ fontSize: 11, color: '#E24B4A', marginTop: 1 }}>
-            +{price.vs_cheapest_pct}% costlier
-          </div>
+ 
+      {/* AI explainer — below the price row */}
+      <div style={{ marginTop: 8, paddingLeft: 50 }}>
+        {!explanation && (
+          <button
+            onClick={handleExplain}
+            disabled={explaining}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#999', fontSize: 12, padding: 0,
+              textDecoration: 'underline', textDecorationStyle: 'dotted',
+            }}
+          >
+            {explaining ? '⏳ Analysing...' : '🤖 Why this price?'}
+          </button>
+        )}
+        {explanation && (
+          <p style={{
+            fontSize: 12, color: '#555', margin: 0,
+            background: '#f5f5f5', padding: '8px 10px',
+            borderRadius: 6, lineHeight: 1.6,
+          }}>
+            {explanation}
+          </p>
         )}
       </div>
     </div>
   );
 }
-
+ 
+// ─── Other sub-components ─────────────────────────────────────────────────────
+ 
 function GenericCard({ generic, onClick }) {
   const displayName = cleanMedicineName(generic.brand_name) || generic.brand_name?.slice(0, 40);
-
   return (
     <button
       onClick={onClick}
       style={{
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', padding: '10px 14px',
-        background: '#fff', border: '1px solid #e8f5e9',
-        borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-        width: '100%', transition: 'background 0.1s',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 14px', background: '#fff',
+        border: '1px solid #e8f5e9', borderRadius: 8,
+        cursor: 'pointer', textAlign: 'left', width: '100%',
       }}
       onMouseEnter={e => e.currentTarget.style.background = '#f0fff4'}
       onMouseLeave={e => e.currentTarget.style.background = '#fff'}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: '#111',
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{
+          fontSize: 14, fontWeight: 500, color: '#111',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
           {displayName}
         </div>
         <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
@@ -310,7 +381,7 @@ function GenericCard({ generic, onClick }) {
     </button>
   );
 }
-
+ 
 function StatBox({ label, value, color = '#111' }) {
   return (
     <div style={{ background: '#fff', padding: '14px 18px' }}>
@@ -319,7 +390,7 @@ function StatBox({ label, value, color = '#111' }) {
     </div>
   );
 }
-
+ 
 function Pill({ text, color, bg }) {
   return (
     <span style={{
@@ -330,7 +401,7 @@ function Pill({ text, color, bg }) {
     </span>
   );
 }
-
+ 
 function EmptyPrices() {
   return (
     <div style={{
@@ -339,13 +410,13 @@ function EmptyPrices() {
     }}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
       <p style={{ fontSize: 14, margin: 0 }}>No pharmacy prices found yet.</p>
-      <p style={{ fontSize: 12, marginTop: 4 }}>
-        Run the 1mg scraper to populate real prices.
+      <p style={{ fontSize: 12, marginTop: 4, color: '#bbb' }}>
+        Prices are updated weekly from verified sources.
       </p>
     </div>
   );
 }
-
+ 
 function LoadingState() {
   return (
     <div style={{ maxWidth: 720, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
@@ -359,11 +430,11 @@ function LoadingState() {
     </div>
   );
 }
-
+ 
 function ErrorState({ msg, onBack }) {
   return (
     <div style={{ maxWidth: 720, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
-      <div style={{ fontSize: 36, marginBottom: 12 }}></div>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>❌</div>
       <p style={{ color: '#E24B4A', marginBottom: 16, fontSize: 14 }}>{msg}</p>
       <button
         onClick={onBack}
@@ -378,3 +449,4 @@ function ErrorState({ msg, onBack }) {
     </div>
   );
 }
+ 

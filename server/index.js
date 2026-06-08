@@ -13,6 +13,8 @@ app.use(helmet());
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
+app.use('/api/ai', require('./routes/ai'));
+
 // Rate limiting
 const generalLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
