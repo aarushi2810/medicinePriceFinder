@@ -5,6 +5,9 @@ import PrescriptionOCR from '../components/PrescriptionOCR';
 
 import { useNavigate } from 'react-router-dom';
 import { searchMedicines } from '../api';
+import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
+
+
 
 export default function Search() {
 
@@ -15,7 +18,7 @@ export default function Search() {
   const [open,     setOpen]     = useState(false);
   const [error,    setError]    = useState('');
 
-  const [stats, setStats] = useState({ total_medicines: '3,600+', ceiling_prices: '915', real_prices: 0 });
+  const [stats, setStats] = useState(null);
 
   const navigate  = useNavigate();
   const wrapRef   = useRef();
@@ -161,10 +164,13 @@ export default function Search() {
               >
                 <div>
                   <div style={{ fontWeight: 500, fontSize: 14, color: '#111' }}>
-                    {med.brand_name}
+                    {getDisplayName(med.brand_name, med.salt_name)}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                     {med.salt_name}
+                    {getManufacturerTag(med.brand_name) && (
+                      <span style={{ marginLeft: 6, color: '#bbb' }}>· {getManufacturerTag(med.brand_name)}</span>
+                    )}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
@@ -219,26 +225,33 @@ export default function Search() {
       </div>
 
       {/* Stats bar */}
-      <div style={{
-        marginTop: 60, display: 'flex', gap: 32,
-        borderTop: '1px solid #eee', paddingTop: 24,
-      }}>
-        {[
-          
-
-          { n: Number(stats.total_medicines).toLocaleString() + '+', label: 'Medicines tracked' },
-          { n: stats.ceiling_prices,  label: 'NPPA ceiling prices' },
-          { n: stats.real_prices + '+', label: 'Live pharmacy prices' },
-
-
-
-        ].map(s => (
-          <div key={s.label}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#111' }}>{s.n}</div>
-            <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
+      {stats && (
+        <div style={{ marginTop: 60, display: 'flex', gap: 32,
+                      borderTop: '1px solid #eee', paddingTop: 24, flexWrap: 'wrap' }}>
+          {[
+            {
+              n: `${Number(stats.total_medicines).toLocaleString()}+`,
+              label: 'Medicines in database',
+            },
+            {
+              n: stats.ceiling_prices,
+              label: 'NPPA ceiling prices',
+              sub: 'Government regulated'
+            },
+            {
+              n: stats.medicines_with_live_prices,
+              label: 'With multi-pharmacy prices',
+              color: stats.medicines_with_live_prices > 30 ? '#1D9E75' : '#888'
+            },
+          ].map(s => (
+            <div key={s.label}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: s.color || '#111' }}>{s.n}</div>
+              <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{s.label}</div>
+              {s.sub && <div style={{ fontSize: 11, color: '#bbb' }}>{s.sub}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -257,7 +270,5 @@ function Spinner() {
     }} />
   );
 }
-
-
 
 

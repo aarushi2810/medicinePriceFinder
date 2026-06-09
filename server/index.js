@@ -44,22 +44,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Daily price scraper cron — 2am every day
-cron.schedule('0 2 * * *', () => {
-  console.log('[Cron] Starting daily price scrape:', new Date().toISOString());
 
-  execFile('node', ['scripts/scrape1mg.js'], { cwd: __dirname }, (err) => {
-    if (err) console.error('[Cron] 1mg failed:', err.message);
-    else     console.log('[Cron] 1mg done');
-  });
 
-  setTimeout(() => {
-    execFile('node', ['scripts/scrapeNetmeds.js'], { cwd: __dirname }, (err) => {
-      if (err) console.error('[Cron] Netmeds failed:', err.message);
-      else     console.log('[Cron] Netmeds done');
-    });
-  }, 30 * 60 * 1000);
+// Every night at 2am — snapshot today's prices into price_history
+cron.schedule('0 2 * * *', async () => {
+  try {
+    await db.query(`
+      INSERT INTO price_history (medicine_id, pharmacy_id, price, recorded_on)
+      SELECT medicine_id, pharmacy_id, price, CURRENT_DATE
+      FROM prices
+      ON CONFLICT DO NOTHING
+    `);
+    console.log('Price history snapshot saved:', new Date().toISOString());
+  } catch (err) {
+    console.error('Snapshot failed:', err.message);
+  }
 });
+
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

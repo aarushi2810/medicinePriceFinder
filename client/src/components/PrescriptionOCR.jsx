@@ -10,96 +10,79 @@ export default function PrescriptionOCR({ onMedicinesFound }) {
   const handleFile = async (file) => {
     if (!file) return;
     setLoading(true);
-    setError('');
+    setError('');    // clear previous error on every new attempt
     setFound([]);
 
     try {
-      // Convert to base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload  = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
+      const base64 = await toBase64(file);
       const { medicines, error: ocrErr } = await ocrPrescription(base64, file.type);
 
-      if (ocrErr || !medicines.length) {
-        setError('Could not read medicines. Try a clearer photo.');
+      if (ocrErr || !medicines?.length) {
+        setError('Could not read medicines clearly. Try a better-lit photo.');
         return;
       }
 
       setFound(medicines);
-      onMedicinesFound(medicines);  // pass up to parent
-
+      if (medicines.length === 1) {
+        onMedicinesFound(medicines);
+      }
     } catch {
-      setError('OCR failed. Check your Gemini API key.');
+      setError('OCR failed — check your internet connection.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ marginTop: 12 }}>
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={e => handleFile(e.target.files[0])}
+        onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
       />
 
       <button
-        onClick={() => inputRef.current.click()}
+        onClick={() => { setError(''); inputRef.current.click(); }}
         disabled={loading}
         style={{
-          width: '100%',
-          padding: '12px',
-          border: '1.5px dashed #1D9E75',
-          borderRadius: 10,
-          background: '#f9fffe',
+          width: '100%', padding: 12,
+          border: '1.5px dashed #1D9E75', borderRadius: 10,
+          background: loading ? '#f0faf5' : '#f9fffe',
           cursor: loading ? 'wait' : 'pointer',
-          color: '#085041',
-          fontSize: 14,
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
+          color: '#085041', fontSize: 14, fontWeight: 500,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          transition: 'background 0.15s',
         }}
       >
-        {loading ? (
-          <>⏳ Reading prescription...</>
-        ) : (
-          <>📷 Scan prescription — AI finds all medicines</>
-        )}
+        {loading
+          ? <><span style={spinner} />Reading prescription with AI...</>
+          : <>📷 Scan prescription — AI finds all medicines</>
+        }
       </button>
 
-      {error && (
-        <p style={{ color: '#E24B4A', fontSize: 13, marginTop: 6 }}>{error}</p>
+      {/* Only show error after an attempt, not on initial render */}
+      {error && !loading && (
+        <p style={{ color: '#E24B4A', fontSize: 12, marginTop: 6 }}>{error}</p>
       )}
 
-      {found.length > 0 && (
-        <div style={{ marginTop: 10 }}>
-          <p style={{ fontSize: 12, color: '#085041', fontWeight: 500, marginBottom: 6 }}>
-            ✓ Found {found.length} medicine{found.length > 1 ? 's' : ''} — click to search each:
+      {found.length > 1 && (
+        <div style={{ marginTop: 10, padding: 12, background: '#f9fffe',
+                      borderRadius: 8, border: '1px solid #E1F5EE' }}>
+          <p style={{ fontSize: 12, color: '#085041', fontWeight: 500, marginBottom: 8 }}>
+            ✓ Found {found.length} medicines — tap to search each:
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {found.map((m, i) => (
-              <button
-                key={i}
+              <button key={i}
                 onClick={() => onMedicinesFound([m])}
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: 20,
-                  border: '1px solid #1D9E75',
-                  background: '#E1F5EE',
-                  color: '#085041',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
-              >
+                  padding: '5px 12px', borderRadius: 20,
+                  border: '1px solid #1D9E75', background: '#E1F5EE',
+                  color: '#085041', fontSize: 13, cursor: 'pointer',
+                }}>
                 {m.name} {m.dosage}
               </button>
             ))}
@@ -109,3 +92,16 @@ export default function PrescriptionOCR({ onMedicinesFound }) {
     </div>
   );
 }
+
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload  = () => resolve(r.result.split(',')[1]);
+  r.onerror = reject;
+  r.readAsDataURL(file);
+});
+
+const spinner = {
+  display: 'inline-block', width: 14, height: 14,
+  borderRadius: '50%', border: '2px solid #ccc',
+  borderTopColor: '#1D9E75', animation: 'spin 0.6s linear infinite',
+};

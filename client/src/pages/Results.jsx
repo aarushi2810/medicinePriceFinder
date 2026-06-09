@@ -2,15 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { comparePrices, getGenerics, explainPrice } from '../api';
 import NearbyMap from '../components/NearbyMap';
+import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
  
 // ─── Helpers ─────────────────────────────────────────────────────────────────
  
-function cleanMedicineName(name) {
-  if (!name) return null;
-  const isCompany = /pvt|ltd|m\/s|limited|pharma|laboratories|industries|corporation/i.test(name);
-  return isCompany ? null : name;
-}
- 
+
 function shortDosage(dosage) {
   if (!dosage) return '';
   const cleaned = dosage.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
@@ -52,10 +48,8 @@ export default function Results() {
  
   const { medicine, prices, summary } = data;
  
-  const displayName  = cleanMedicineName(medicine.brand_name)
-    || medicine.salt_name?.split(' ').slice(0, 4).join(' ')
-    || medicine.brand_name;
-  const isCompanyName = !cleanMedicineName(medicine.brand_name);
+  const displayName  = getDisplayName(medicine.brand_name, medicine.salt_name);
+  const manufacturerTag = getManufacturerTag(medicine.brand_name);
  
   const cheapestPrice = summary?.cheapest_price || 0;
   const avgPrice      = prices.length
@@ -79,20 +73,16 @@ export default function Results() {
  
       {/* Medicine header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: '#111', margin: '0 0 6px', lineHeight: 1.3 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
           {displayName}
         </h1>
-        <p style={{ color: '#777', fontSize: 14, margin: '0 0 4px' }}>
-          {medicine.salt_name}
-        </p>
-        <p style={{ color: '#aaa', fontSize: 13, margin: 0 }}>
-          {shortDosage(medicine.dosage)}
-          {medicine.form && medicine.form !== 'other' ? ` · ${medicine.form}` : ''}
-          {isCompanyName && (
-            <span style={{ marginLeft: 8, color: '#bbb' }}>
-              · Marketed by {medicine.brand_name?.slice(0, 40)}
-            </span>
-          )}
+        {manufacturerTag && (
+          <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
+            by {manufacturerTag}
+          </p>
+        )}
+        <p style={{ color: '#666', fontSize: 14, margin: 0 }}>
+          {medicine.salt_name} · {medicine.dosage?.slice(0, 50)} · {medicine.form}
         </p>
       </div>
  
@@ -121,25 +111,43 @@ export default function Results() {
         </div>
       )}
  
-      {/* NPPA breach banner */}
       {summary?.nppa_breach_count > 0 && (
         <div style={{
-          background: '#fff5f5', border: '1px solid #fde8e8',
-          borderRadius: 10, padding: '12px 16px', marginBottom: 20,
-          display: 'flex', gap: 10, alignItems: 'flex-start',
+          margin: '0 0 20px', padding: '10px 14px',
+          background: '#fff8f0', border: '1px solid #f5cba7',
+          borderRadius: 8, fontSize: 13, color: '#7d4e00', lineHeight: 1.6,
         }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-          <div>
-            <p style={{ fontWeight: 600, color: '#A32D2D', fontSize: 14, margin: '0 0 2px' }}>
-              NPPA ceiling exceeded
-            </p>
-            <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>
-              {summary.nppa_breach_count} pharmacy selling above the government ceiling of
-              ₹{formatPrice(summary.nppa_ceiling)} per unit. Report at nppaindia.nic.in.
-            </p>
-          </div>
+          ⚠️ <strong>{summary.nppa_breach_count} of {summary.pharmacy_count} pharmacies</strong> are
+          charging above the NPPA government ceiling of ₹{summary.nppa_ceiling}.
+          This is unfortunately common — many pharmacies charge full MRP which exceeds
+          the regulated ceiling. The ceiling is the <em>maximum legal price</em>.
         </div>
       )}
+
+
+
+{prices.length === 1 && prices[0]?.pharmacy_name === 'NPPA Standard' && (
+  <div style={{
+    padding: '8px 14px', background: '#fffbeb',
+    border: '1px solid #fde68a', borderRadius: 8,
+    fontSize: 13, color: '#92400e', marginBottom: 16,
+  }}>
+    📋 <strong>Reference price only</strong> — showing NPPA government approved retail
+    price. Live comparison across 1mg, Netmeds and PharmEasy coming soon.
+  </div>
+)}
+
+{prices.length > 1 && (
+  <div style={{
+    padding: '8px 14px', background: '#E1F5EE',
+    border: '1px solid #6ee7b7', borderRadius: 8,
+    fontSize: 13, color: '#065f46', marginBottom: 16,
+  }}>
+    ✓ <strong>Live comparison available</strong> — prices verified across
+    {prices.length} sources
+  </div>
+)}
+
  
       {/* Price comparison */}
       <div style={{ marginBottom: 32 }}>
@@ -343,7 +351,7 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
 // ─── Other sub-components ─────────────────────────────────────────────────────
  
 function GenericCard({ generic, onClick }) {
-  const displayName = cleanMedicineName(generic.brand_name) || generic.brand_name?.slice(0, 40);
+  const displayName = getDisplayName(generic.brand_name, generic.salt_name) || generic.brand_name?.slice(0, 40);
   return (
     <button
       onClick={onClick}
@@ -449,4 +457,3 @@ function ErrorState({ msg, onBack }) {
     </div>
   );
 }
- 

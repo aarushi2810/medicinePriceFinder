@@ -191,12 +191,18 @@ router.get('/stats', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT
-        (SELECT COUNT(*) FROM medicines)                              AS total_medicines,
-        (SELECT COUNT(*) FROM salts WHERE nppa_ceiling_price IS NOT NULL) AS ceiling_prices,
-        (SELECT COUNT(*) FROM prices WHERE pharmacy_id != (
-          SELECT id FROM pharmacies WHERE name = 'NPPA Standard' LIMIT 1
-        ))                                                           AS real_prices,
-        (SELECT COUNT(DISTINCT pharmacy_id) FROM prices)             AS pharmacy_count
+        (SELECT COUNT(*) FROM medicines)                                       AS total_medicines,
+        (SELECT COUNT(*) FROM salts WHERE nppa_ceiling_price IS NOT NULL)      AS ceiling_prices,
+        (SELECT COUNT(DISTINCT medicine_id) FROM prices
+          WHERE pharmacy_id != (
+            SELECT id FROM pharmacies WHERE name='NPPA Standard' LIMIT 1
+          )
+        )                                                                      AS medicines_with_live_prices,
+        (SELECT COUNT(*) FROM prices
+          WHERE pharmacy_id != (
+            SELECT id FROM pharmacies WHERE name='NPPA Standard' LIMIT 1
+          )
+        )                                                                      AS total_live_prices
     `);
     res.json(result.rows[0]);
   } catch (err) {
