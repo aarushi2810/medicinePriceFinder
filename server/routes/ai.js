@@ -5,7 +5,8 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const RETRY_DELAYS_MS = [700, 1600];
 
 // Strict rate limit on AI routes — they cost money
 const aiLimit = rateLimit({
@@ -26,7 +27,7 @@ router.post('/ocr', async (req, res) => {
   }
 
   try {
-    const result = await model.generateContent([
+    const result = await generateWithRetry([
       {
         inlineData: { mimeType, data: imageBase64 }
       },
@@ -77,15 +78,73 @@ Write exactly 2 short sentences (max 25 words each) explaining why this price is
 Be specific. Mention actual numbers. Use plain English a patient would understand.
 No bullet points. No headers. Just 2 sentences.`;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(prompt);
     const explanation = result.response.text().trim();
 
     res.json({ explanation });
 
   } catch (err) {
     console.error('Explain error:', err.message);
-    res.status(500).json({ error: 'Explanation failed' });
+    res.json({
+      explanation: buildFallbackExplanation({
+        pharmacy,
+        price,
+        cheapestPrice,
+        nppaCeiling,
+        avgPrice,
+      }),
+      fallback: true,
+    });
   }
 });
+
+async function generateWithRetry(input) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await model.generateContent(input);
+    } catch (err) {
+      lastError = err;
+      if (!isTransientGeminiError(err) || attempt === RETRY_DELAYS_MS.length) throw err;
+      await wait(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  throw lastError;
+}
+
+function isTransientGeminiError(err) {
+  const message = err?.message || '';
+  return /\b(429|500|503|504)\b|overload|high demand|temporarily|unavailable|deadline/i.test(message);
+}
+
+function buildFallbackExplanation({ pharmacy, price, cheapestPrice, nppaCeiling, avgPrice }) {
+  const current = Number(price);
+  const cheapest = Number(cheapestPrice);
+  const ceiling = Number(nppaCeiling);
+  const average = Number(avgPrice);
+
+  if (Number.isFinite(ceiling) && ceiling > 0 && current > ceiling) {
+    return `${pharmacy} charges ₹${current.toFixed(2)}, above the NPPA ceiling of ₹${ceiling.toFixed(2)}. The ceiling is the maximum regulated price per unit.`;
+  }
+
+  if (Number.isFinite(cheapest) && cheapest > 0 && current > cheapest) {
+    const extra = current - cheapest;
+    const percent = Math.round((extra / cheapest) * 100);
+    return `${pharmacy} charges ₹${current.toFixed(2)}, which is ₹${extra.toFixed(2)} (${percent}%) above the cheapest listing. Prices can differ because of seller discounts and stock.`;
+  }
+
+  if (Number.isFinite(average) && average > 0) {
+    const comparison = current <= average ? 'below' : 'above';
+    return `${pharmacy} lists this medicine at ₹${current.toFixed(2)}, the cheapest available price. It is ${comparison} the current average of ₹${average.toFixed(2)}.`;
+  }
+
+  return `${pharmacy} lists this medicine at ₹${current.toFixed(2)}, the cheapest price currently available. Final prices may vary with stock and seller discounts.`;
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 module.exports = router;

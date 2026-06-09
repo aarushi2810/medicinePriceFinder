@@ -153,27 +153,33 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Get the target medicine's form so we don't match syrups to tablets
+    const target = await db.query(
+      `SELECT salt_id, form FROM medicines WHERE id = $1`, [id]
+    );
+    if (!target.rows.length) return res.json({ generics: [], fromCache: false });
+
+    const { salt_id, form } = target.rows[0];
+
     const result = await db.query(`
       SELECT
-        m.id,
-        m.brand_name,
-        m.dosage,
-        m.form,
+        m.id, m.brand_name, m.dosage, m.form,
         MIN(p.price) AS lowest_price,
         COUNT(p.id)  AS available_at
       FROM medicines m
       LEFT JOIN prices p ON p.medicine_id = m.id
       WHERE
-        m.salt_id = (SELECT salt_id FROM medicines WHERE id = $1)
-        AND m.id != $1
+        m.salt_id = $1
+        AND m.id   != $2
+        AND m.form  = $3
       GROUP BY m.id, m.brand_name, m.dosage, m.form
       ORDER BY lowest_price ASC NULLS LAST
-    `, [id]);
+      LIMIT 10
+    `, [salt_id, id, form]);
 
     const data = { generics: result.rows, fromCache: false };
     if (res.setCache) res.setCache(data);
     res.json(data);
-
   } catch (err) {
     console.error('Generics error:', err.message);
     res.status(500).json({ error: 'Generics lookup failed' });
@@ -203,33 +209,32 @@ router.get('/stats', async (req, res) => {
 // GET /api/pharmacies/nearby?lat=30.33&lng=76.38&radius=5
 router.get('/nearby', async (req, res) => {
   const { lat, lng, radius = 5 } = req.query;
-
-  if (!lat || !lng) {
-    return res.status(400).json({ error: 'lat and lng required' });
-  }
+  if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
 
   try {
+    // Haversine computed inline — no stored column needed
     const result = await db.query(`
       SELECT
-        ph.id,
-        ph.name,
-        ph.address,
-        ph.lat,
-        ph.lng,
-        (6371 * acos(
-          cos(radians($1)) * cos(radians(ph.lat)) *
-          cos(radians(ph.lng) - radians($2)) +
-          sin(radians($1)) * sin(radians(ph.lat))
-        )) AS distance_km
-      FROM pharmacies ph
-      WHERE
-        ph.type = 'local'
-        AND ph.lat IS NOT NULL
-        AND ph.lng IS NOT NULL
-      HAVING distance_km < $3
+        id, name, address, lat, lng,
+        ROUND(
+          (6371 * acos(
+            cos(radians($1)) * cos(radians(lat)) *
+            cos(radians(lng) - radians($2)) +
+            sin(radians($1)) * sin(radians(lat))
+          ))::numeric, 2
+        ) AS distance_km
+      FROM pharmacies
+      WHERE type = 'local' AND lat IS NOT NULL AND lng IS NOT NULL
+        AND (
+          6371 * acos(
+            cos(radians($1)) * cos(radians(lat)) *
+            cos(radians(lng) - radians($2)) +
+            sin(radians($1)) * sin(radians(lat))
+          )
+        ) < $3
       ORDER BY distance_km ASC
       LIMIT 20
-    `, [lat, lng, radius]);
+    `, [parseFloat(lat), parseFloat(lng), parseFloat(radius)]);
 
     res.json({ pharmacies: result.rows });
   } catch (err) {
