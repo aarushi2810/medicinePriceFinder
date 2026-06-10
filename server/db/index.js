@@ -1,6 +1,12 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+console.log('DATABASE_URL =', process.env.DATABASE_URL?.slice(0, 50));
+
+console.log('DB_HOST =', process.env.DB_HOST);
+
+console.log('DB_NAME =', process.env.DB_NAME);
+
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
