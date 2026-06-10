@@ -10,7 +10,15 @@ const app = express();
 
 // Security + middleware
 app.use(helmet());
-app.use(cors({ origin: 'http://localhost:5173' }));
+
+
+app.use(cors({
+
+  origin: true,
+
+  credentials: true
+
+}));
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/ai', require('./routes/ai'));
