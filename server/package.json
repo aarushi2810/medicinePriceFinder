@@ -1,13 +1,19 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "MedPrice Finder Backend",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"No tests configured\""
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "express",
+    "postgresql",
+    "medicine-price-finder"
+  ],
+  "author": "Aarushi",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -24,5 +30,8 @@
     "puppeteer": "^25.1.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
