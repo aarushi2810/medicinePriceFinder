@@ -73,8 +73,10 @@ export function getCleanSaltName(saltName) {
   // Clean up + separators: "Cefixime Trihydrate+ Ofloxacin" → "Cefixime + Ofloxacin"
   cleaned = cleaned.replace(/\s*\+\s*/g, ' + ');
 
-  // Strip trailing dosage fragments like "500mg" at the end
-  cleaned = cleaned.replace(/\s+\d+\s*(mg|ml|mcg|iu|gm|g)\s*$/i, '');
+  // Strip trailing dosage fragments like "500mg" at the end, unless it's part of a ratio (contains /)
+  if (!cleaned.includes('/')) {
+    cleaned = cleaned.replace(/\s+\d+\s*(mg|ml|mcg|iu|gm|g)\s*$/i, '');
+  }
 
   // Collapse whitespace
   cleaned = cleaned.replace(/\s+/g, ' ').trim();

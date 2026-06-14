@@ -127,7 +127,7 @@ router.get('/:id/compare', cacheMiddleware('compare'), async (req, res) => {
       vs_cheapest_pct: i === 0
         ? 0
         : Math.round(((parseFloat(p.price) - cheapestPrice) / cheapestPrice) * 100),
-      nppa_breach: nppaCeiling
+      nppa_breach: (nppaCeiling && p.pharmacy_name !== 'NPPA Standard')
         ? parseFloat(p.price) > nppaCeiling
         : false,
     }));
