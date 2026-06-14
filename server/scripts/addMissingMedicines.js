@@ -2,6 +2,35 @@ const db = require('../db');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const MISSING_MEDICINES = [
+  // Baseline medicines (original list)
+  { brand: 'Crocin', salt: 'Paracetamol 500mg', dosage: '500mg', form: 'tablet', ceiling: 2.30 },
+  { brand: 'Calpol', salt: 'Paracetamol 500mg', dosage: '500mg', form: 'tablet', ceiling: 2.30 },
+  { brand: 'Dolo', salt: 'Paracetamol 500mg', dosage: '500mg', form: 'tablet', ceiling: 2.30 },
+  { brand: 'Dolo 650', salt: 'Paracetamol 650mg', dosage: '650mg', form: 'tablet', ceiling: 2.80 },
+  { brand: 'Crocin 650', salt: 'Paracetamol 650mg', dosage: '650mg', form: 'tablet', ceiling: 2.80 },
+  { brand: 'Mox', salt: 'Amoxicillin 500mg', dosage: '500mg', form: 'capsule', ceiling: 18.50 },
+  { brand: 'Novamox', salt: 'Amoxicillin 500mg', dosage: '500mg', form: 'capsule', ceiling: 18.50 },
+  { brand: 'Azithral', salt: 'Azithromycin 500mg', dosage: '500mg', form: 'tablet', ceiling: 32.00 },
+  { brand: 'Zithromax', salt: 'Azithromycin 500mg', dosage: '500mg', form: 'tablet', ceiling: 32.00 },
+  { brand: 'Cifran', salt: 'Ciprofloxacin 500mg', dosage: '500mg', form: 'tablet', ceiling: 15.20 },
+  { brand: 'Ciplox', salt: 'Ciprofloxacin 500mg', dosage: '500mg', form: 'tablet', ceiling: 15.20 },
+  { brand: 'Glycomet', salt: 'Metformin 500mg', dosage: '500mg', form: 'tablet', ceiling: 3.20 },
+  { brand: 'Glucophage', salt: 'Metformin 500mg', dosage: '500mg', form: 'tablet', ceiling: 3.20 },
+  { brand: 'Atorva', salt: 'Atorvastatin 10mg', dosage: '10mg', form: 'tablet', ceiling: 8.75 },
+  { brand: 'Lipitor', salt: 'Atorvastatin 10mg', dosage: '10mg', form: 'tablet', ceiling: 8.75 },
+  { brand: 'Amlip', salt: 'Amlodipine 5mg', dosage: '5mg', form: 'tablet', ceiling: 3.50 },
+  { brand: 'Norvasc', salt: 'Amlodipine 5mg', dosage: '5mg', form: 'tablet', ceiling: 3.50 },
+  { brand: 'Omez', salt: 'Omeprazole 20mg', dosage: '20mg', form: 'capsule', ceiling: 4.50 },
+  { brand: 'Pan 40', salt: 'Pantoprazole 40mg', dosage: '40mg', form: 'tablet', ceiling: 6.80 },
+  { brand: 'Pantodac', salt: 'Pantoprazole 40mg', dosage: '40mg', form: 'tablet', ceiling: 6.80 },
+  { brand: 'Cetzine', salt: 'Cetirizine 10mg', dosage: '10mg', form: 'tablet', ceiling: 2.10 },
+  { brand: 'Zyrtec', salt: 'Cetirizine 10mg', dosage: '10mg', form: 'tablet', ceiling: 2.10 },
+  { brand: 'Brufen', salt: 'Ibuprofen 400mg', dosage: '400mg', form: 'tablet', ceiling: 3.80 },
+  { brand: 'Combiflam', salt: 'Ibuprofen 400mg', dosage: '400mg', form: 'tablet', ceiling: 3.80 },
+  { brand: 'Ecosprin', salt: 'Aspirin 75mg', dosage: '75mg', form: 'tablet', ceiling: 1.80 },
+  { brand: 'Disprin', salt: 'Aspirin 75mg', dosage: '75mg', form: 'tablet', ceiling: 1.80 },
+
+  // New medicines list
   { brand: 'Januvia', salt: 'Sitagliptin 100mg', dosage: '100mg', form: 'tablet', ceiling: 38.50 },
   { brand: 'Rosuvas', salt: 'Rosuvastatin 10mg', dosage: '10mg', form: 'tablet', ceiling: 12.50 },
   { brand: 'Telma', salt: 'Telmisartan 40mg', dosage: '40mg', form: 'tablet', ceiling: 7.20 },
