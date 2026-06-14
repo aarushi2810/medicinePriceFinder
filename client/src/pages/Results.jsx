@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { comparePrices, getGenerics, explainPrice } from '../api';
 import NearbyMap from '../components/NearbyMap';
+import SavingsBanner from '../components/SavingsBanner';
+import GenericSavingsCard from '../components/GenericSavingsCard';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
 import { getCleanProductName, getCompositionText } from '../utils/parseMedicineName';
  
@@ -56,6 +58,10 @@ export default function Results() {
   const avgPrice      = prices.length
     ? (prices.reduce((s, p) => s + parseFloat(p.price), 0) / prices.length).toFixed(2)
     : null;
+
+  const isNppaOnly = prices.length === 1 && prices[0]?.pharmacy_name === 'NPPA Standard';
+  const hasMultipleSources = prices.length > 1;
+  const showMaxSavings = parseFloat(summary?.max_savings) > 0;
  
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px' }}>
@@ -74,37 +80,49 @@ export default function Results() {
  
       {/* Medicine header */}
       <div style={{ marginBottom: 24 }}>
-      
-
-
-        
-
-
-<h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
-  {getCleanProductName(medicine.brand_name, medicine.salt_name)}
-</h1>
-{getManufacturerTag(medicine.brand_name) && (
-  <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
-    by {getManufacturerTag(medicine.brand_name)}
-  </p>
-)}
-<p style={{ color: '#666', fontSize: 13, margin: 0, maxWidth: 600, marginInline: 'auto' }}>
-  {getCompositionText(medicine.brand_name).slice(0, 180)}
-  {getCompositionText(medicine.brand_name).length > 180 ? '...' : ''}
-</p>
-
-
-
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
+          {getCleanProductName(medicine.brand_name, medicine.salt_name)}
+        </h1>
+        {getManufacturerTag(medicine.brand_name) && (
+          <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
+            by {getManufacturerTag(medicine.brand_name)}
+          </p>
+        )}
+        <p style={{ color: '#666', fontSize: 13, margin: 0, maxWidth: 600, marginInline: 'auto' }}>
+          {getCompositionText(medicine.brand_name).slice(0, 180)}
+          {getCompositionText(medicine.brand_name).length > 180 ? '...' : ''}
+        </p>
       </div>
 
+      {/* Savings Banner — shows when branded medicine has cheaper generics */}
+      <SavingsBanner
+        currentMedicine={medicine}
+        currentPrice={cheapestPrice}
+        generics={generics}
+        onSwitchToGeneric={(genericId) => navigate(`/results/${genericId}`)}
+      />
 
+      {/* NPPA-only: clean reference price card */}
+      {isNppaOnly && (
+        <div style={{
+          border: '1.5px solid #d4edda', borderRadius: 14,
+          padding: '24px', background: '#f9fffe', marginBottom: 28,
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#085041', marginBottom: 10 }}>
+            📋 Government Reference Price: ₹{formatPrice(prices[0]?.price)} per {medicine.unit_of_packing || 'unit'}
+          </div>
+          <p style={{ fontSize: 13, color: '#666', margin: '0 0 8px' }}>
+            This is the NPPA-regulated maximum retail price.
+          </p>
+          <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
+            Live pharmacy comparison coming soon.
+          </p>
+        </div>
+      )}
 
-      
-
-
- 
-      {/* Summary stats */}
-      {summary && (
+      {/* Summary stats — only show when there's meaningful comparison data */}
+      {summary && !isNppaOnly && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
@@ -113,9 +131,13 @@ export default function Results() {
           overflow: 'hidden', background: '#eee',
         }}>
           <StatBox label="Cheapest"       value={`₹${formatPrice(summary.cheapest_price)}`} color="#1D9E75" />
-          <StatBox label="Most expensive" value={`₹${formatPrice(summary.most_expensive)}`} />
-          <StatBox label="Max savings"    value={`₹${formatPrice(summary.max_savings)}`}
-            color={parseFloat(summary.max_savings) > 0 ? '#1D9E75' : '#111'} />
+          {hasMultipleSources && (
+            <StatBox label="Most expensive" value={`₹${formatPrice(summary.most_expensive)}`} />
+          )}
+          {showMaxSavings && (
+            <StatBox label="Max savings"    value={`₹${formatPrice(summary.max_savings)}`}
+              color="#1D9E75" />
+          )}
           <StatBox label="NPPA ceiling"
             value={summary.nppa_ceiling ? `₹${formatPrice(summary.nppa_ceiling)}/unit` : '—'} />
           {summary.nppa_breach_count > 0 && (
@@ -141,9 +163,7 @@ export default function Results() {
         </div>
       )}
 
-
-
-{prices.length === 1 && prices[0]?.pharmacy_name === 'NPPA Standard' && (
+{!isNppaOnly && prices.length === 1 && (
   <div style={{
     padding: '8px 14px', background: '#fffbeb',
     border: '1px solid #fde68a', borderRadius: 8,
@@ -154,7 +174,7 @@ export default function Results() {
   </div>
 )}
 
-{prices.length > 1 && (
+{hasMultipleSources && (
   <div style={{
     padding: '8px 14px', background: '#E1F5EE',
     border: '1px solid #6ee7b7', borderRadius: 8,
@@ -165,70 +185,47 @@ export default function Results() {
   </div>
 )}
 
- 
-      {/* Price comparison */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{
-          display: 'flex', justifyContent: 'space-between',
-          alignItems: 'baseline', marginBottom: 12,
-        }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111', margin: 0 }}>
-            Price comparison
-          </h2>
-          <span style={{ fontSize: 13, color: '#aaa' }}>
-            {prices.length} {prices.length === 1 ? 'source' : 'sources'} · sorted cheapest first
-          </span>
-        </div>
- 
-        {prices.length === 0 ? (
-          <EmptyPrices />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {prices.map((p, i) => (
-              <PriceCard
-                key={`${p.pharmacy_id}-${i}`}
-                price={p}
-                isCheapest={i === 0}
-                medicine={medicine}
-                cheapestPrice={cheapestPrice}
-                avgPrice={avgPrice}
-              />
-            ))}
-          </div>
-        )}
-      </div>
- 
-      {/* Generic alternatives */}
-      {generics.length > 0 && (
-        <div style={{
-          border: '1px solid #d4edda', borderRadius: 12,
-          padding: '20px', background: '#f9fffe', marginBottom: 32,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 20 }}>💡</span>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#085041', margin: 0 }}>
-              Same medicine, lower price
+      {/* Price comparison — hide entirely for NPPA-only */}
+      {!isNppaOnly && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'baseline', marginBottom: 12,
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111', margin: 0 }}>
+              Price comparison
             </h2>
+            <span style={{ fontSize: 13, color: '#aaa' }}>
+              {prices.length} {prices.length === 1 ? 'source' : 'sources'} · sorted cheapest first
+            </span>
           </div>
-          <p style={{ fontSize: 13, color: '#666', margin: '0 0 14px 28px' }}>
-            Same active ingredient — medically equivalent alternatives
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {generics.slice(0, 6).map(g => (
-              <GenericCard
-                key={g.id}
-                generic={g}
-                onClick={() => navigate(`/results/${g.id}`)}
-              />
-            ))}
-          </div>
-          {generics.length > 6 && (
-            <p style={{ fontSize: 12, color: '#aaa', marginTop: 10, textAlign: 'center' }}>
-              + {generics.length - 6} more alternatives
-            </p>
+ 
+          {prices.length === 0 ? (
+            <EmptyPrices />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {prices.map((p, i) => (
+                <PriceCard
+                  key={`${p.pharmacy_id}-${i}`}
+                  price={p}
+                  isCheapest={i === 0}
+                  medicine={medicine}
+                  cheapestPrice={cheapestPrice}
+                  avgPrice={avgPrice}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}
+ 
+      {/* Generic alternatives — using new GenericSavingsCard */}
+      <GenericSavingsCard
+        generics={generics}
+        currentMedicine={medicine}
+        currentPrice={cheapestPrice}
+        onSelect={(genericId) => navigate(`/results/${genericId}`)}
+      />
  
       {/* Nearby map */}
       <NearbyMap medicineName={displayName} />
@@ -370,47 +367,7 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
 }
  
 // ─── Other sub-components ─────────────────────────────────────────────────────
- 
-function GenericCard({ generic, onClick }) {
-  const displayName = getDisplayName(generic.brand_name, generic.salt_name) || generic.brand_name?.slice(0, 40);
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 14px', background: '#fff',
-        border: '1px solid #e8f5e9', borderRadius: 8,
-        cursor: 'pointer', textAlign: 'left', width: '100%',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = '#f0fff4'}
-      onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 14, fontWeight: 500, color: '#111',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {displayName}
-        </div>
-        <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
-          {shortDosage(generic.dosage)?.slice(0, 50)}
-          {generic.form && generic.form !== 'other' ? ` · ${generic.form}` : ''}
-        </div>
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-        {generic.lowest_price ? (
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1D9E75' }}>
-            from ₹{formatPrice(generic.lowest_price)}
-          </span>
-        ) : (
-          <span style={{ fontSize: 13, color: '#bbb' }}>No price</span>
-        )}
-        <div style={{ fontSize: 11, color: '#bbb', marginTop: 1 }}>→ view</div>
-      </div>
-    </button>
-  );
-}
- 
+
 function StatBox({ label, value, color = '#111' }) {
   return (
     <div style={{ background: '#fff', padding: '14px 18px' }}>

@@ -137,11 +137,15 @@ export default function Search() {
                 <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
                   {med.lowest_price && (
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1D9E75' }}>
-                      from ₹{parseFloat(med.lowest_price).toFixed(2)}
+                      {med.pharmacy_count > 1
+                        ? `from ₹${parseFloat(med.lowest_price).toFixed(2)}`
+                        : `NPPA ref. ₹${parseFloat(med.lowest_price).toFixed(2)}`}
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: '#aaa' }}>
-                    {med.pharmacy_count} {med.pharmacy_count === 1 ? 'source' : 'sources'}
+                    {med.pharmacy_count > 1
+                      ? `${med.pharmacy_count} sources`
+                      : 'Reference price'}
                   </div>
                 </div>
               </button>

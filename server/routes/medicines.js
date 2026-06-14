@@ -12,6 +12,9 @@ router.get('/search', cacheMiddleware('search'), async (req, res) => {
 
   try {
     const start = Date.now();
+    const exact    = q.trim();
+    const prefix   = `${exact}%`;
+    const contains = `%${exact}%`;
 
     const result = await db.query(`
       SELECT
@@ -30,17 +33,26 @@ router.get('/search', cacheMiddleware('search'), async (req, res) => {
       LEFT JOIN prices p ON p.medicine_id = m.id
       WHERE
         (
-          LOWER(m.brand_name) LIKE LOWER($1) OR
-          LOWER(s.salt_name)  LIKE LOWER($1)
+          LOWER(m.brand_name) LIKE LOWER($3) OR
+          LOWER(s.salt_name)  LIKE LOWER($3)
         )
         AND m.brand_name NOT LIKE '(%'
         AND LENGTH(m.brand_name) > 2
+        AND LENGTH(TRIM(s.salt_name)) >= 3
+        AND m.brand_name !~ '^[0-9]+$'
+        AND m.brand_name !~ '^[^a-zA-Z0-9]+$'
       GROUP BY s.id, s.salt_name, s.nppa_ceiling_price
       ORDER BY
-        CASE WHEN LOWER(s.salt_name) LIKE LOWER($1) THEN 0 ELSE 1 END,
+        CASE
+          WHEN LOWER(MIN(m.brand_name)) = LOWER($1) OR LOWER(s.salt_name) = LOWER($1) THEN 0
+          WHEN LOWER(MIN(m.brand_name)) LIKE LOWER($2) OR LOWER(s.salt_name) LIKE LOWER($2) THEN 1
+          ELSE 2
+        END,
+        CASE WHEN COUNT(p.id) > 1 THEN 0 ELSE 1 END,
+        similarity(LOWER(s.salt_name), LOWER($1)) DESC,
         s.salt_name ASC
       LIMIT 20
-    `, [`%${q.trim()}%`]);
+    `, [exact, prefix, contains]);
 
     const queryMs = Date.now() - start;
 
@@ -149,29 +161,63 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
 
   try {
     const target = await db.query(
-      `SELECT salt_id, form, dosage FROM medicines WHERE id = $1`, [id]
+      `SELECT m.salt_id, m.form, m.dosage, s.salt_name
+       FROM medicines m
+       JOIN salts s ON m.salt_id = s.id
+       WHERE m.id = $1`, [id]
     );
     if (!target.rows.length) return res.json({ generics: [], fromCache: false });
 
-    const { salt_id, form, dosage } = target.rows[0];
+    const { salt_id, form, dosage, salt_name } = target.rows[0];
     const targetStrength = parseFloat((dosage || '').match(/[\d.]+/)?.[0]);
 
-    const result = await db.query(`
+    // Primary query: match on exact salt_id + form
+    let result = await db.query(`
       SELECT
         m.id, m.brand_name, m.dosage, m.form,
         MIN(p.price) AS lowest_price,
         COUNT(p.id)  AS available_at
       FROM medicines m
       LEFT JOIN prices p ON p.medicine_id = m.id
+      LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
       WHERE
         m.salt_id = $1
         AND m.id   != $2
         AND m.form  = $3
         AND m.brand_name NOT LIKE '(%'
+        AND m.brand_name != 'NPPA Standard'
+        AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
       GROUP BY m.id, m.brand_name, m.dosage, m.form
       ORDER BY lowest_price ASC NULLS LAST
-      LIMIT 10
+      LIMIT 15
     `, [salt_id, id, form]);
+
+    // Fallback: if no generics found by salt_id, try matching on the
+    // first word of the salt_name (the base ingredient)
+    if (result.rows.length === 0 && salt_name) {
+      const baseIngredient = salt_name.trim().split(/\s+/)[0];
+      if (baseIngredient && baseIngredient.length >= 3) {
+        result = await db.query(`
+          SELECT
+            m.id, m.brand_name, m.dosage, m.form,
+            MIN(p.price) AS lowest_price,
+            COUNT(p.id)  AS available_at
+          FROM medicines m
+          JOIN salts s ON m.salt_id = s.id
+          LEFT JOIN prices p ON p.medicine_id = m.id
+          LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
+          WHERE
+            LOWER(s.salt_name) LIKE LOWER($1)
+            AND m.id != $2
+            AND m.brand_name NOT LIKE '(%'
+            AND m.brand_name != 'NPPA Standard'
+            AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
+          GROUP BY m.id, m.brand_name, m.dosage, m.form
+          ORDER BY lowest_price ASC NULLS LAST
+          LIMIT 15
+        `, [`${baseIngredient}%`, id]);
+      }
+    }
 
     const filtered = result.rows.filter(r => {
       if (!targetStrength) return true;
