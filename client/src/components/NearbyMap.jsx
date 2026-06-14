@@ -360,23 +360,7 @@ export default function NearbyMap({ medicineName }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: '#666' }}>Radius:</span>
-        {[5, 10, 20].map(r => (
-          <button
-            key={r}
-            onClick={() => handleRadiusChange(r)}
-            style={{
-              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-              border:     `1px solid ${radius === r ? '#1D9E75' : '#ddd'}`,
-              background: radius === r ? '#E1F5EE' : '#fff',
-              color:      radius === r ? '#085041' : '#666',
-            }}
-          >
-            {r}km
-          </button>
-        ))}
-      </div>
+    
 
       {error && <p style={{ color: '#E24B4A', fontSize: 13, marginBottom: 8 }}>{error}</p>}
 
