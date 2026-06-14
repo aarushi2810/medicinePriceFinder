@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { comparePrices, getGenerics, explainPrice } from '../api';
 import NearbyMap from '../components/NearbyMap';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
+import { getCleanProductName, getCompositionText } from '../utils/parseMedicineName';
  
 // ─── Helpers ─────────────────────────────────────────────────────────────────
  
@@ -73,18 +74,34 @@ export default function Results() {
  
       {/* Medicine header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
-          {displayName}
-        </h1>
-        {manufacturerTag && (
-          <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
-            by {manufacturerTag}
-          </p>
-        )}
-        <p style={{ color: '#666', fontSize: 14, margin: 0 }}>
-          {medicine.salt_name} · {medicine.dosage?.slice(0, 50)} · {medicine.form}
-        </p>
+      
+
+
+        
+
+
+<h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
+  {getCleanProductName(medicine.brand_name, medicine.salt_name)}
+</h1>
+{getManufacturerTag(medicine.brand_name) && (
+  <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
+    by {getManufacturerTag(medicine.brand_name)}
+  </p>
+)}
+<p style={{ color: '#666', fontSize: 13, margin: 0, maxWidth: 600, marginInline: 'auto' }}>
+  {getCompositionText(medicine.brand_name).slice(0, 180)}
+  {getCompositionText(medicine.brand_name).length > 180 ? '...' : ''}
+</p>
+
+
+
       </div>
+
+
+
+      
+
+
  
       {/* Summary stats */}
       {summary && (

@@ -1,15 +1,15 @@
 const express = require('express');
 const router  = express.Router();
 
-router.get('/overpass', async (req, res) => {
-  const { lat, lng, radius = 10 } = req.query;
+const ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.openstreetmap.ru/api/interpreter',
+];
 
-  if (!lat || !lng) {
-    return res.status(400).json({ error: 'lat and lng required' });
-  }
-
-  const query = `
-    [out:json][timeout:25];
+function buildQuery(lat, lng, radius) {
+  return `
+    [out:json][timeout:10];
     (
       node["amenity"="pharmacy"](around:${radius * 1000},${lat},${lng});
       way["amenity"="pharmacy"](around:${radius * 1000},${lat},${lng});
@@ -17,42 +17,58 @@ router.get('/overpass', async (req, res) => {
     );
     out center tags;
   `;
+}
 
-  const ENDPOINTS = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-  ];
+function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), ms);
 
-  let data = null;
-
-  for (const endpoint of ENDPOINTS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId  = setTimeout(() => controller.abort(), 12000);
-
-      const response = await fetch(
-        `${endpoint}?data=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
-      );
+  return fetch(url, { signal: controller.signal })
+    .then(res => {
       clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      throw err;
+    });
+}
 
-      if (response.ok) {
-        data = await response.json();
-        break;
-      }
-    } catch {
-      continue; // try next endpoint
-    }
+router.get('/overpass', async (req, res) => {
+  const { lat, lng, radius = 10 } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat and lng required' });
   }
 
-  if (!data) {
+  const query = buildQuery(lat, lng, radius);
+  const url   = (endpoint) => `${endpoint}?data=${encodeURIComponent(query)}`;
+
+  // Fire all mirrors in parallel — return as soon as ONE succeeds
+  const attempts = ENDPOINTS.map(endpoint =>
+    fetchWithTimeout(url(endpoint), 7000)
+      .then(data => ({ endpoint, data }))
+      .catch(err => {
+        console.error(`Overpass mirror failed: ${endpoint} → ${err.message}`);
+        throw err; // re-throw so Promise.any sees it as rejected
+      })
+  );
+
+  let result;
+  try {
+    result = await Promise.any(attempts);
+  } catch (aggregateErr) {
+    console.error('All Overpass mirrors failed:', aggregateErr.errors?.map(e => e.message));
     return res.status(503).json({
       error: 'Pharmacy data temporarily unavailable',
       pharmacies: [],
     });
   }
 
-  const pharmacies = (data.elements || [])
+  console.log(`Overpass success via: ${result.endpoint}`);
+
+  const pharmacies = (result.data.elements || [])
     .map(el => {
       const tags = el.tags || {};
       return {
@@ -66,7 +82,7 @@ router.get('/overpass', async (req, res) => {
     })
     .filter(p => p.lat && p.lng);
 
-  res.json({ pharmacies, count: pharmacies.length });
+  res.json({ pharmacies, count: pharmacies.length, source: result.endpoint });
 });
 
 module.exports = router;
