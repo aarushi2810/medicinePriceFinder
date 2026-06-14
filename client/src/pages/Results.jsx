@@ -255,6 +255,41 @@ export default function Results() {
     </div>
   );
 }
+
+
+const [sortBy, setSortBy] = useState('price');
+
+const sortedPrices = [...prices].sort((a, b) => {
+  if (sortBy === 'price') return a.price - b.price;
+  if (sortBy === 'discount') return b.discount_pct - a.discount_pct;
+  return 0;
+});
+
+// JSX — add before the price cards list:
+<div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+  <span style={{ fontSize: 12, color: '#888', alignSelf: 'center' }}>Sort by:</span>
+  {[
+    { key: 'price',    label: 'Price (low to high)' },
+    { key: 'discount', label: 'Discount %' },
+  ].map(opt => (
+    <button
+      key={opt.key}
+      onClick={() => setSortBy(opt.key)}
+      style={{
+        padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+        border: `1px solid ${sortBy === opt.key ? '#1D9E75' : '#ddd'}`,
+        background: sortBy === opt.key ? '#E1F5EE' : '#fff',
+        color: sortBy === opt.key ? '#085041' : '#666',
+      }}
+    >
+      {opt.label}
+    </button>
+  ))}
+</div>
+
+{/* Then map over sortedPrices instead of prices */}
+{sortedPrices.map((p, i) => <PriceCard key={p.pharmacy_id} price={p} isCheapest={i === 0} />)}
+
  
 // ─── PriceCard ────────────────────────────────────────────────────────────────
  
