@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon   from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-
+// Fix default marker icons — bundled via Vite
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -23,12 +22,6 @@ const greenIcon = new L.Icon({
   popupAnchor: [1, -34],
   className:   'pharmacy-marker',
 });
-
-function RecenterMap({ lat, lng }) {
-  const map = useMap();
-  map.setView([lat, lng], 14);
-  return null;
-}
 
 function haversine(lat1, lng1, lat2, lng2) {
   if (!lat1 || !lng1 || !lat2 || !lng2) return 999;
@@ -50,6 +43,74 @@ export default function NearbyMap() {
   const [error,      setError]      = useState('');
   const [radius,     setRadius]     = useState(10);
 
+  const mapContainerRef = useRef(null); // the <div> element
+  const mapRef          = useRef(null); // the Leaflet map instance
+  const markersRef      = useRef([]);   // currently rendered markers
+
+  // ── Initialize the map once, when coords first become available ──────────
+  useEffect(() => {
+    if (!coords || !mapContainerRef.current) return;
+
+    if (!mapRef.current) {
+      // First time — create the map
+      mapRef.current = L.map(mapContainerRef.current).setView(
+        [coords.lat, coords.lng], 14
+      );
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+      }).addTo(mapRef.current);
+
+      // User location marker
+      L.marker([coords.lat, coords.lng])
+        .addTo(mapRef.current)
+        .bindPopup('<strong>📍 Your location</strong>');
+    } else {
+      // Map already exists — just recenter
+      mapRef.current.setView([coords.lat, coords.lng], 14);
+    }
+  }, [coords]);
+
+  // ── Update pharmacy markers whenever the list changes ─────────────────────
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Clear old markers
+    markersRef.current.forEach(m => mapRef.current.removeLayer(m));
+    markersRef.current = [];
+
+    // Add new markers
+    pharmacies.forEach(ph => {
+      const distanceText = ph.distance < 1
+        ? `${Math.round(ph.distance * 1000)}m away`
+        : `${ph.distance.toFixed(1)}km away`;
+
+      const popupHtml = `
+        <strong>${ph.name}</strong><br/>
+        ${distanceText}
+        ${ph.opening ? `<br/><small>🕐 ${ph.opening}</small>` : ''}
+        ${ph.phone   ? `<br/><small>📞 ${ph.phone}</small>` : ''}
+      `;
+
+      const marker = L.marker([ph.lat, ph.lng], { icon: greenIcon })
+        .addTo(mapRef.current)
+        .bindPopup(popupHtml);
+
+      markersRef.current.push(marker);
+    });
+  }, [pharmacies]);
+
+  // ── Cleanup map on unmount ─────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // ── Fetch pharmacies from backend (Overpass proxy) ─────────────────────────
   const fetchOverpassPharmacies = async (lat, lng, radiusKm) => {
     setError('');
     setLoading(true);
@@ -199,44 +260,22 @@ export default function NearbyMap() {
 
       {error && <p style={{ color: '#E24B4A', fontSize: 13, marginBottom: 8 }}>{error}</p>}
 
-      {coords && (
-        <>
-          <MapContainer
-            center={[coords.lat, coords.lng]}
-            zoom={14}
-            style={{ height: 320, borderRadius: 10, border: '1px solid #eee' }}
-          >
-            <RecenterMap lat={coords.lat} lng={coords.lng} />
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-            />
+      {/* Map container — always rendered, but empty until coords exist */}
+      <div
+        ref={mapContainerRef}
+        style={{
+          height: 320,
+          borderRadius: 10,
+          border: '1px solid #eee',
+          display: coords ? 'block' : 'none',
+          background: '#f5f5f5',
+        }}
+      />
 
-            <Marker position={[coords.lat, coords.lng]}>
-              <Popup><strong>📍 Your location</strong></Popup>
-            </Marker>
-
-            {pharmacies.map(ph => (
-              <Marker key={ph.id} position={[ph.lat, ph.lng]} icon={greenIcon}>
-                <Popup>
-                  <strong>{ph.name}</strong>
-                  <br />
-                  {ph.distance < 1
-                    ? `${Math.round(ph.distance * 1000)}m away`
-                    : `${ph.distance.toFixed(1)}km away`}
-                  {ph.opening && <><br /><small>🕐 {ph.opening}</small></>}
-                  {ph.phone   && <><br /><small>📞 {ph.phone}</small></>}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-
-          {pharmacies.length > 0 && (
-            <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-              {pharmacies.length} pharmacies found within {radius}km
-            </p>
-          )}
-        </>
+      {pharmacies.length > 0 && (
+        <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+          {pharmacies.length} pharmacies found within {radius}km
+        </p>
       )}
     </div>
   );
