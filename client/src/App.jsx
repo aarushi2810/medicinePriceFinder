@@ -2,20 +2,29 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Search  from './pages/Search';
 import Results from './pages/Results';
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 export default function App() {
   return (
     <BrowserRouter>
       <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minHeight: '100vh', background: '#fff' }}>
         <Header />
+        <ErrorBoundary>
         <Routes>
           <Route path="/"            element={<Search />} />
           <Route path="/results/:id" element={<Results />} />
           <Route path="*"            element={<Navigate to="/" />} />
         </Routes>
+        </ErrorBoundary>
       </div>
     </BrowserRouter>
   );
 }
+
+
+
+
+
 
 function Header() {
   return (
