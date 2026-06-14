@@ -1,38 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
-
-
-import PrescriptionOCR from '../components/PrescriptionOCR';
-
 import { useNavigate } from 'react-router-dom';
 import { searchMedicines } from '../api';
+import PrescriptionOCR from '../components/PrescriptionOCR';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
 
-
-
 export default function Search() {
-
+  const [query,      setQuery]      = useState('');
+  const [results,    setResults]    = useState([]);
+  const [loading,    setLoading]    = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [error,      setError]      = useState('');
+  const [stats,      setStats]      = useState(null);
   const [ocrResults, setOcrResults] = useState([]);
-  const [query,    setQuery]    = useState('');
-  const [results,  setResults]  = useState([]);
-  const [loading,  setLoading]  = useState(false);
-  const [open,     setOpen]     = useState(false);
-  const [error,    setError]    = useState('');
-
-  const [stats, setStats] = useState(null);
-
   const navigate  = useNavigate();
   const wrapRef   = useRef();
 
-  const handleOcrResults = (medicines) => {
-    if (medicines.length === 1) {
-      // Single medicine — search directly
-      setQuery(`${medicines[0].name} ${medicines[0].dosage}`);
-    } else {
-      // Multiple — show all as chips for user to pick
-      setOcrResults(medicines);
-    }
-  };
-  
+  // Fetch live stats once on mount
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/api/medicines/stats`)
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
 
   // Debounced search — 300ms
   useEffect(() => {
@@ -55,15 +44,6 @@ export default function Search() {
     return () => clearTimeout(timer);
   }, [query]);
 
-
-
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/medicines/stats`)
-      .then(r => r.json())
-      .then(setStats)
-      .catch(() => {});  // silently fail — hardcoded fallback stays
-  }, []);
-
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -75,8 +55,16 @@ export default function Search() {
 
   const handleSelect = (medicine) => {
     setOpen(false);
-    setQuery(medicine.brand_name);
+    setQuery(getDisplayName(medicine.brand_name, medicine.salt_name));
     navigate(`/results/${medicine.id}`);
+  };
+
+  const handleOcrResults = (medicines) => {
+    if (medicines.length === 1) {
+      setQuery(`${medicines[0].name} ${medicines[0].dosage}`);
+    } else {
+      setOcrResults(medicines);
+    }
   };
 
   return (
@@ -84,10 +72,11 @@ export default function Search() {
 
       {/* Hero */}
       <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111', marginBottom: 8 }}>
-        Find the cheapest medicine near you
+        Check medicine prices against government rates
       </h1>
       <p style={{ color: '#666', marginBottom: 32, fontSize: 15 }}>
-        Real prices from 1mg, Netmeds & PharmEasy. NPPA ceiling prices verified.
+        NPPA-verified reference prices for {stats ? Number(stats.total_medicines).toLocaleString() : '840'}+ medicines.
+        {' '}Live multi-pharmacy comparison available for {stats?.medicines_with_live_prices || '50'}+ common medicines.
       </p>
 
       {/* Search bar */}
@@ -104,41 +93,13 @@ export default function Search() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search by medicine or salt name (e.g. Paracetamol, Crocin)"
-            style={{
-              flex: 1, border: 'none', outline: 'none',
-              fontSize: 15, color: '#111', background: 'transparent',
-            }}
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#111', background: 'transparent' }}
             autoFocus
           />
           {loading && <Spinner />}
-
-
-
         </div>
 
-
-        <PrescriptionOCR onMedicinesFound={handleOcrResults} />
-
-{ocrResults.length > 1 && (
-  <div style={{ marginTop: 12, padding: 12, background: '#f9fffe',
-                borderRadius: 8, border: '1px solid #E1F5EE' }}>
-    <p style={{ fontSize: 13, color: '#085041', marginBottom: 8, fontWeight: 500 }}>
-      Found {ocrResults.length} medicines in prescription:
-    </p>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-      {ocrResults.map((m, i) => (
-        <button key={i}
-          onClick={() => { setQuery(`${m.name} ${m.dosage}`); setOcrResults([]); }}
-          style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid #1D9E75',
-                   background: '#E1F5EE', color: '#085041', fontSize: 13, cursor: 'pointer' }}>
-          {m.name} {m.dosage}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-
-        {/* Dropdown */}
+        {/* Dropdown — must be inside the relative wrapper, NOT inside the input box */}
         {open && results.length > 0 && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0,
@@ -167,7 +128,7 @@ export default function Search() {
                     {getDisplayName(med.brand_name, med.salt_name)}
                   </div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                    {med.salt_name}
+                    {med.formulation_count > 1 && `${med.formulation_count} brands available`}
                     {getManufacturerTag(med.brand_name) && (
                       <span style={{ marginLeft: 6, color: '#bbb' }}>· {getManufacturerTag(med.brand_name)}</span>
                     )}
@@ -180,7 +141,7 @@ export default function Search() {
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: '#aaa' }}>
-                    {med.pharmacy_count} pharmacies
+                    {med.pharmacy_count} {med.pharmacy_count === 1 ? 'source' : 'sources'}
                   </div>
                 </div>
               </button>
@@ -200,8 +161,27 @@ export default function Search() {
         )}
       </div>
 
-      {error && (
-        <p style={{ color: '#E24B4A', fontSize: 13, marginTop: 8 }}>{error}</p>
+      {error && <p style={{ color: '#E24B4A', fontSize: 13, marginTop: 8 }}>{error}</p>}
+
+      {/* OCR — sits below search bar, outside the relative wrapper */}
+      <PrescriptionOCR onMedicinesFound={handleOcrResults} />
+
+      {ocrResults.length > 1 && (
+        <div style={{ marginTop: 12, padding: 12, background: '#f9fffe', borderRadius: 8, border: '1px solid #E1F5EE' }}>
+          <p style={{ fontSize: 13, color: '#085041', marginBottom: 8, fontWeight: 500 }}>
+            Found {ocrResults.length} medicines in prescription:
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {ocrResults.map((m, i) => (
+              <button key={i}
+                onClick={() => { setQuery(`${m.name} ${m.dosage}`); setOcrResults([]); }}
+                style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid #1D9E75',
+                         background: '#E1F5EE', color: '#085041', fontSize: 13, cursor: 'pointer' }}>
+                {m.name} {m.dosage}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Popular searches */}
@@ -211,12 +191,8 @@ export default function Search() {
           {['Paracetamol', 'Amoxicillin', 'Metformin', 'Atorvastatin', 'Azithromycin', 'Omeprazole'].map(name => (
             <button
               key={name}
-              onClick={() => { setQuery(name); }}
-              style={{
-                padding: '6px 14px', borderRadius: 20,
-                border: '1px solid #eee', background: '#fafafa',
-                fontSize: 13, cursor: 'pointer', color: '#555',
-              }}
+              onClick={() => setQuery(name)}
+              style={{ padding: '6px 14px', borderRadius: 20, border: '1px solid #eee', background: '#fafafa', fontSize: 13, cursor: 'pointer', color: '#555' }}
             >
               {name}
             </button>
@@ -224,25 +200,14 @@ export default function Search() {
         </div>
       </div>
 
-      {/* Stats bar */}
+      {/* Stats bar — live from DB */}
       {stats && (
-        <div style={{ marginTop: 60, display: 'flex', gap: 32,
-                      borderTop: '1px solid #eee', paddingTop: 24, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 60, display: 'flex', gap: 32, borderTop: '1px solid #eee', paddingTop: 24, flexWrap: 'wrap' }}>
           {[
-            {
-              n: `${Number(stats.total_medicines).toLocaleString()}+`,
-              label: 'Medicines in database',
-            },
-            {
-              n: stats.ceiling_prices,
-              label: 'NPPA ceiling prices',
-              sub: 'Government regulated'
-            },
-            {
-              n: stats.medicines_with_live_prices,
-              label: 'With multi-pharmacy prices',
-              color: stats.medicines_with_live_prices > 30 ? '#1D9E75' : '#888'
-            },
+            { n: `${Number(stats.total_medicines).toLocaleString()}+`, label: 'Medicines in database' },
+            { n: stats.ceiling_prices, label: 'NPPA ceiling prices', sub: 'Government regulated' },
+            { n: stats.medicines_with_live_prices, label: 'With multi-pharmacy comparison',
+              color: stats.medicines_with_live_prices > 30 ? '#1D9E75' : '#888' },
           ].map(s => (
             <div key={s.label}>
               <div style={{ fontSize: 20, fontWeight: 700, color: s.color || '#111' }}>{s.n}</div>
@@ -252,14 +217,13 @@ export default function Search() {
           ))}
         </div>
       )}
+
+      <p style={{ fontSize: 11, color: '#aaa', marginTop: 12, textAlign: 'center' }}>
+        "Reference price" = NPPA government-approved price. "Live comparison" = real prices across 1mg, Netmeds, PharmEasy for select medicines.
+      </p>
     </div>
   );
 }
-
-
-
-
-
 
 function Spinner() {
   return (
@@ -270,5 +234,3 @@ function Spinner() {
     }} />
   );
 }
-
-

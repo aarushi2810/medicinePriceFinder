@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon   from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix Leaflet default marker icons
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconRetinaUrl: markerIcon2x,
+  iconUrl:       markerIcon,
+  shadowUrl:     markerShadow,
+  iconSize:      [25, 41],
+  iconAnchor:    [12, 41],
 });
 
 const greenIcon = new L.Icon({
-  iconUrl:    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-  shadowUrl:  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize:   [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor:[1, -34],
+  iconUrl:     markerIcon,
+  shadowUrl:   markerShadow,
+  iconSize:    [25, 41],
+  iconAnchor:  [12, 41],
+  popupAnchor: [1, -34],
+  className:   'pharmacy-marker',
 });
 
 function RecenterMap({ lat, lng }) {
@@ -37,77 +43,55 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 export default function NearbyMap() {
-  // ── All state declared at the top ────────────────────────────────────────
-  const [coords,      setCoords]      = useState(null);
-  const [pincode,     setPincode]     = useState('');
-  const [pharmacies,  setPharmacies]  = useState([]);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
-  const [radius,      setRadius]      = useState(10);   // ← was missing
+  const [coords,     setCoords]     = useState(null);
+  const [pincode,    setPincode]    = useState('');
+  const [pharmacies, setPharmacies] = useState([]);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState('');
+  const [radius,     setRadius]     = useState(10);
 
-  // ── Fetch from Overpass with fallback mirrors ─────────────────────────────
   const fetchOverpassPharmacies = async (lat, lng, radiusKm) => {
     setError('');
     setLoading(true);
     setPharmacies([]);
 
-    const query = `
-      [out:json][timeout:30];
-      (
-        node["amenity"="pharmacy"](around:${radiusKm * 1000},${lat},${lng});
-        way["amenity"="pharmacy"](around:${radiusKm * 1000},${lat},${lng});
-        node["shop"="chemist"](around:${radiusKm * 1000},${lat},${lng});
+    try {
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/pharmacies/overpass?lat=${lat}&lng=${lng}&radius=${radiusKm}`,
+        { signal: controller.signal }
       );
-      out center tags;
-    `;
+      clearTimeout(timeoutId);
 
-    const ENDPOINTS = [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass.openstreetmap.ru/api/interpreter',
-    ];
+      if (!res.ok) {
+        setError('Pharmacy service unavailable right now. Try again shortly.');
+        return;
+      }
 
-    let data = null;
-    for (const endpoint of ENDPOINTS) {
-      try {
-        const res = await fetch(
-          `${endpoint}?data=${encodeURIComponent(query)}`
-        );
-        if (res.ok) { data = await res.json(); break; }
-      } catch { continue; }
-    }
+      const data = await res.json();
+      const results = (data.pharmacies || [])
+        .map(ph => ({ ...ph, distance: haversine(lat, lng, ph.lat, ph.lng) }))
+        .sort((a, b) => a.distance - b.distance);
 
-    setLoading(false);
+      setPharmacies(results);
 
-    if (!data) {
-      setError('Pharmacy data temporarily unavailable. Try again in a moment.');
-      return;
-    }
+      if (results.length === 0) {
+        setError(`No pharmacies found within ${radiusKm}km. Try a larger radius.`);
+      }
 
-    const results = (data.elements || [])
-      .map(el => {
-        const tags = el.tags || {};
-        return {
-          id:       el.id,
-          name:     tags.name || tags.operator || tags.brand || 'Medical Store',
-          lat:      el.lat  ?? el.center?.lat,
-          lng:      el.lon  ?? el.center?.lon,
-          phone:    tags.phone    || tags['contact:phone'] || '',
-          opening:  tags.opening_hours || '',
-          distance: haversine(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
-        };
-      })
-      .filter(p => p.lat && p.lng)
-      .sort((a, b) => a.distance - b.distance);
-
-    setPharmacies(results);
-
-    if (results.length === 0) {
-      setError(`No pharmacies found within ${radiusKm}km. Try a larger radius.`);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Try again.');
+      } else {
+        setError('Could not load pharmacies. Check your connection.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleGPS = () => {
     setError('');
     setLoading(true);
@@ -129,10 +113,15 @@ export default function NearbyMap() {
     setError('');
     setLoading(true);
     try {
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 10000);
+
       const res  = await fetch(
         `https://nominatim.openstreetmap.org/search?postalcode=${pincode}&country=India&format=json&limit=1`,
-        { headers: { 'User-Agent': 'MedPrice/1.0' } }
+        { headers: { 'User-Agent': 'MedPrice/1.0' }, signal: controller.signal }
       );
+      clearTimeout(timeoutId);
+
       const data = await res.json();
 
       if (!data.length) {
@@ -157,7 +146,6 @@ export default function NearbyMap() {
     if (coords) fetchOverpassPharmacies(coords.lat, coords.lng, r);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ marginTop: 32 }}>
       <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
@@ -167,13 +155,8 @@ export default function NearbyMap() {
         Real locations from OpenStreetMap · Free · No API key required
       </p>
 
-      {/* Location inputs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <button
-          onClick={handleGPS}
-          disabled={loading}
-          style={buttonStyle('#1D9E75', loading)}
-        >
+        <button onClick={handleGPS} disabled={loading} style={buttonStyle('#1D9E75', loading)}>
           {loading ? '⏳ Searching...' : '📍 Use my GPS'}
         </button>
 
@@ -184,10 +167,7 @@ export default function NearbyMap() {
             onKeyDown={e => e.key === 'Enter' && handlePincode()}
             placeholder="Enter pincode"
             maxLength={6}
-            style={{
-              padding: '8px 12px', borderRadius: 8,
-              border: '1px solid #ddd', fontSize: 14, width: 130,
-            }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, width: 130 }}
           />
           <button
             onClick={handlePincode}
@@ -199,7 +179,6 @@ export default function NearbyMap() {
         </div>
       </div>
 
-      {/* Radius selector */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: 13, color: '#666' }}>Radius:</span>
         {[5, 10, 20].map(r => (
@@ -208,9 +187,9 @@ export default function NearbyMap() {
             onClick={() => handleRadiusChange(r)}
             style={{
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-              border:      `1px solid ${radius === r ? '#1D9E75' : '#ddd'}`,
-              background:  radius === r ? '#E1F5EE' : '#fff',
-              color:       radius === r ? '#085041' : '#666',
+              border:     `1px solid ${radius === r ? '#1D9E75' : '#ddd'}`,
+              background: radius === r ? '#E1F5EE' : '#fff',
+              color:      radius === r ? '#085041' : '#666',
             }}
           >
             {r}km
@@ -218,11 +197,8 @@ export default function NearbyMap() {
         ))}
       </div>
 
-      {error && (
-        <p style={{ color: '#E24B4A', fontSize: 13, marginBottom: 8 }}>{error}</p>
-      )}
+      {error && <p style={{ color: '#E24B4A', fontSize: 13, marginBottom: 8 }}>{error}</p>}
 
-      {/* Map — only mounts when we have coordinates */}
       {coords && (
         <>
           <MapContainer
@@ -236,18 +212,12 @@ export default function NearbyMap() {
               attribution='© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
             />
 
-            {/* User location marker */}
             <Marker position={[coords.lat, coords.lng]}>
               <Popup><strong>📍 Your location</strong></Popup>
             </Marker>
 
-            {/* Pharmacy markers */}
             {pharmacies.map(ph => (
-              <Marker
-                key={ph.id}
-                position={[ph.lat, ph.lng]}
-                icon={greenIcon}
-              >
+              <Marker key={ph.id} position={[ph.lat, ph.lng]} icon={greenIcon}>
                 <Popup>
                   <strong>{ph.name}</strong>
                   <br />
