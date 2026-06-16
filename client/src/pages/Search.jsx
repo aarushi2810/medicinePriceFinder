@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchMedicines } from '../api';
 import PrescriptionOCR from '../components/PrescriptionOCR';
-import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
+import { getDisplayName, getCleanSaltName } from '../utils/medicineNames';
 
 export default function Search() {
   const [query,      setQuery]      = useState('');
@@ -71,13 +71,9 @@ export default function Search() {
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '60px 24px 24px' }}>
 
       {/* Hero */}
-      <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111', marginBottom: 8 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111', marginBottom: 24 }}>
         Compare medicine prices across pharmacies
       </h1>
-      <p style={{ color: '#666', marginBottom: 32, fontSize: 15 }}>
-        Government-verified ceiling prices for {stats ? Number(stats.total_medicines).toLocaleString() : '840'}+ medicines.
-        {' '}Live price comparison across 1mg, Netmeds, PharmEasy & Apollo for {stats?.medicines_with_live_prices || '50'}+ medicines.
-      </p>
 
       {/* Search bar */}
       <div ref={wrapRef} style={{ position: 'relative' }}>
@@ -131,21 +127,8 @@ export default function Search() {
                     <div style={{ fontWeight: 600, fontSize: 14, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {getDisplayName(med.brand_name, med.salt_name)}
                     </div>
-                    <div style={{ fontSize: 12, color: '#888', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      {med.dosage && <span>{med.dosage}</span>}
-                      {med.form && <span style={{ color: '#bbb' }}>·</span>}
-                      {med.form && <span style={{ textTransform: 'capitalize' }}>{med.form}</span>}
-                      {med.formulation_count > 1 && (
-                        <span style={{
-                          fontSize: 11, padding: '1px 6px', borderRadius: 10,
-                          background: '#f0f0f0', color: '#666',
-                        }}>
-                          {med.formulation_count} brands
-                        </span>
-                      )}
-                      {getManufacturerTag(med.brand_name) && (
-                        <span style={{ color: '#bbb' }}>· {getManufacturerTag(med.brand_name)}</span>
-                      )}
+                    <div style={{ fontSize: 12, color: '#888', marginTop: 3 }}>
+                      {getCleanSaltName(med.salt_name)}{med.dosage ? ` ${med.dosage}` : ''}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -183,6 +166,10 @@ export default function Search() {
           </div>
         )}
       </div>
+
+      <p style={{ color: '#888', marginTop: 8, fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
+        Search by medicine name or active ingredient
+      </p>
 
       {error && <p style={{ color: '#E24B4A', fontSize: 13, marginTop: 8 }}>{error}</p>}
 

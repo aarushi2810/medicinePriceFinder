@@ -44,9 +44,27 @@ router.get('/search', cacheMiddleware('search'), async (req, res) => {
       GROUP BY s.id, s.salt_name, s.nppa_ceiling_price
       ORDER BY
         CASE
-          WHEN LOWER(MIN(m.brand_name)) = LOWER($1) OR LOWER(s.salt_name) = LOWER($1) THEN 0
-          WHEN LOWER(MIN(m.brand_name)) LIKE LOWER($2) OR LOWER(s.salt_name) LIKE LOWER($2) THEN 1
-          ELSE 2
+          -- If searching for a combination query, treat all matches equally
+          WHEN LOWER($1) LIKE '%+%' THEN
+            CASE
+              WHEN LOWER(MIN(m.brand_name)) = LOWER($1) OR LOWER(s.salt_name) = LOWER($1) THEN 0
+              WHEN LOWER(MIN(m.brand_name)) LIKE LOWER($2) OR LOWER(s.salt_name) LIKE LOWER($2) THEN 1
+              ELSE 2
+            END
+          -- Otherwise, penalize combination drugs (containing '+') by ranking them lower
+          ELSE
+            CASE
+              -- Priority 1: Brand name or Salt name starts with query and is single-ingredient (no '+')
+              WHEN (LOWER(MIN(m.brand_name)) LIKE LOWER($2) AND MIN(m.brand_name) NOT LIKE '%+%')
+                OR (LOWER(s.salt_name) LIKE LOWER($2) AND s.salt_name NOT LIKE '%+%') THEN 0
+              
+              -- Priority 2: Brand/Salt contains query and is single-ingredient (no '+')
+              WHEN (LOWER(MIN(m.brand_name)) LIKE LOWER($3) AND MIN(m.brand_name) NOT LIKE '%+%')
+                OR (LOWER(s.salt_name) LIKE LOWER($3) AND s.salt_name NOT LIKE '%+%') THEN 1
+              
+              -- Priority 3: Combination drugs containing query (contains '+')
+              ELSE 2
+            END
         END,
         CASE WHEN COUNT(p.id) > 1 THEN 0 ELSE 1 END,
         similarity(LOWER(s.salt_name), LOWER($1)) DESC,
