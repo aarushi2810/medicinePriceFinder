@@ -171,7 +171,7 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
     const { salt_id, form, dosage, salt_name } = target.rows[0];
     const targetStrength = parseFloat((dosage || '').match(/[\d.]+/)?.[0]);
 
-    // Primary query: match on exact salt_id + form
+    // Pass 1: same salt_id, any form (not just exact form match)
     let result = await db.query(`
       SELECT
         m.id, m.brand_name, m.dosage, m.form,
@@ -183,21 +183,21 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
       WHERE
         m.salt_id = $1
         AND m.id   != $2
-        AND m.form  = $3
         AND m.brand_name NOT LIKE '(%'
         AND m.brand_name != 'NPPA Standard'
         AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
       GROUP BY m.id, m.brand_name, m.dosage, m.form
-      ORDER BY lowest_price ASC NULLS LAST
-      LIMIT 15
+      ORDER BY
+        CASE WHEN m.form = $3 THEN 0 ELSE 1 END,
+        lowest_price ASC NULLS LAST
+      LIMIT 25
     `, [salt_id, id, form]);
 
-    // Fallback: if no generics found by salt_id, try matching on the
-    // first word of the salt_name (the base ingredient)
-    if (result.rows.length === 0 && salt_name) {
-      const baseIngredient = salt_name.trim().split(/\s+/)[0];
+    // Pass 2: if few results, also try matching on base ingredient name
+    if (result.rows.length < 5 && salt_name) {
+      const baseIngredient = salt_name.trim().split(/[\s+(]/)[0];
       if (baseIngredient && baseIngredient.length >= 3) {
-        result = await db.query(`
+        const moreResults = await db.query(`
           SELECT
             m.id, m.brand_name, m.dosage, m.form,
             MIN(p.price) AS lowest_price,
@@ -213,18 +213,30 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
             AND m.brand_name != 'NPPA Standard'
             AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
           GROUP BY m.id, m.brand_name, m.dosage, m.form
-          ORDER BY lowest_price ASC NULLS LAST
-          LIMIT 15
-        `, [`${baseIngredient}%`, id]);
+          ORDER BY
+            CASE WHEN m.form = $3 THEN 0 ELSE 1 END,
+            lowest_price ASC NULLS LAST
+          LIMIT 25
+        `, [`${baseIngredient}%`, id, form]);
+
+        // Merge, avoiding duplicates
+        const existingIds = new Set(result.rows.map(r => r.id));
+        for (const row of moreResults.rows) {
+          if (!existingIds.has(row.id)) {
+            result.rows.push(row);
+            existingIds.add(row.id);
+          }
+        }
       }
     }
 
+    // Looser strength filter — allow up to 50% difference (was 20%)
     const filtered = result.rows.filter(r => {
       if (!targetStrength) return true;
       const rowStrength = parseFloat((r.dosage || '').match(/[\d.]+/)?.[0]);
       if (!rowStrength) return true;
       const diff = Math.abs(rowStrength - targetStrength) / targetStrength;
-      return diff < 0.2;
+      return diff < 0.5;
     });
 
     const data = { generics: filtered, fromCache: false };

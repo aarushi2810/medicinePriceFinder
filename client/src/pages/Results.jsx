@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { comparePrices, getGenerics, explainPrice } from '../api';
+import { comparePrices, getGenerics } from '../api';
 
 import SavingsBanner from '../components/SavingsBanner';
 import GenericSavingsCard from '../components/GenericSavingsCard';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
-import { getCleanProductName, getCompositionText } from '../utils/parseMedicineName';
+import { getCompositionText } from '../utils/parseMedicineName';
+import ExplainPrice from '../components/ExplainPrice';
  
 // ─── Helpers ─────────────────────────────────────────────────────────────────
  
@@ -81,7 +82,7 @@ export default function Results() {
       {/* Medicine header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
-          {getCleanProductName(medicine.brand_name, medicine.salt_name)}
+          {displayName}
         </h1>
         {getManufacturerTag(medicine.brand_name) && (
           <p style={{ fontSize: 12, color: '#aaa', margin: '0 0 4px' }}>
@@ -112,11 +113,8 @@ export default function Results() {
           <div style={{ fontSize: 16, fontWeight: 600, color: '#085041', marginBottom: 10 }}>
             📋 Government Reference Price: ₹{formatPrice(prices[0]?.price)} per {medicine.unit_of_packing || 'unit'}
           </div>
-          <p style={{ fontSize: 13, color: '#666', margin: '0 0 8px' }}>
+          <p style={{ fontSize: 13, color: '#666', margin: 0 }}>
             This is the government-regulated ceiling price under the Drug Price Control Order (DPCO).
-          </p>
-          <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
-            Live pharmacy comparison coming soon for this medicine.
           </p>
         </div>
       )}
@@ -169,8 +167,7 @@ export default function Results() {
     border: '1px solid #fde68a', borderRadius: 8,
     fontSize: 13, color: '#92400e', marginBottom: 16,
   }}>
-    📋 <strong>Reference price only</strong> — showing the government-regulated ceiling
-    price. Live comparison across 1mg, Netmeds & PharmEasy coming soon.
+    📋 <strong>Reference price only</strong> — showing the government-regulated ceiling price.
   </div>
 )}
 
@@ -462,12 +459,9 @@ function FindPharmacies({ medicineName }) {
       border: '1px solid #eee', borderRadius: 14,
       background: '#fafafa',
     }}>
-      <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: '0 0 4px' }}>
+      <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: '0 0 16px' }}>
         📍 Find pharmacies nearby
       </h3>
-      <p style={{ fontSize: 13, color: '#888', margin: '0 0 16px' }}>
-        Opens Google Maps with real pharmacies — ratings, phone numbers, directions & hours
-      </p>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flexWrap: 'wrap' }}>
         <input

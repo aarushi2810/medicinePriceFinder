@@ -226,6 +226,72 @@ const MEDICINES = [
   { name: 'Susten',         dosage: '200mg',  prices: [{ ph: '1mg', p: 285.00, m: 350 }, { ph: 'Netmeds', p: 298.00, m: 350 }, { ph: 'PharmEasy', p: 275.00, m: 350 }, { ph: 'Apollo Pharmacy', p: 345.00, m: 350 }]},
   { name: 'Premarin',       dosage: '0.625mg', prices: [{ ph: '1mg', p: 195.00, m: 240 }, { ph: 'Netmeds', p: 205.00, m: 240 }, { ph: 'PharmEasy', p: 188.00, m: 240 }]},
   { name: 'Letoval',        dosage: '2.5mg',  prices: [{ ph: '1mg', p: 165.00, m: 205 }, { ph: 'Netmeds', p: 175.00, m: 205 }, { ph: 'PharmEasy', p: 160.00, m: 205 }, { ph: 'Apollo Pharmacy', p: 202.00, m: 205 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — Diabetes (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Glyciphage',      dosage: '500mg',  prices: [{ ph: '1mg', p: 26.00, m: 33 }, { ph: 'Netmeds', p: 28.00, m: 33 }, { ph: 'PharmEasy', p: 25.00, m: 33 }, { ph: 'Apollo Pharmacy', p: 32.50, m: 33 }]},
+  { name: 'Obimet',          dosage: '500mg',  prices: [{ ph: '1mg', p: 28.00, m: 35 }, { ph: 'Netmeds', p: 30.00, m: 35 }, { ph: 'PharmEasy', p: 27.00, m: 35 }]},
+  { name: 'Gluformin',       dosage: '500mg',  prices: [{ ph: '1mg', p: 24.50, m: 31 }, { ph: 'Netmeds', p: 26.50, m: 31 }, { ph: 'PharmEasy', p: 23.80, m: 31 }, { ph: 'Apollo Pharmacy', p: 30.50, m: 31 }]},
+  { name: 'Jalra',           dosage: '50mg',   prices: [{ ph: '1mg', p: 225.00, m: 278 }, { ph: 'Netmeds', p: 238.00, m: 278 }, { ph: 'PharmEasy', p: 218.00, m: 278 }, { ph: 'Apollo Pharmacy', p: 275.00, m: 278 }]},
+  { name: 'Ziten',           dosage: '20mg',   prices: [{ ph: '1mg', p: 145.00, m: 180 }, { ph: 'Netmeds', p: 152.00, m: 180 }, { ph: 'PharmEasy', p: 140.00, m: 180 }]},
+  { name: 'Glizid',          dosage: '80mg',   prices: [{ ph: '1mg', p: 35.00, m: 44 }, { ph: 'Netmeds', p: 38.00, m: 44 }, { ph: 'PharmEasy', p: 33.50, m: 44 }, { ph: 'Apollo Pharmacy', p: 43.00, m: 44 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — BP (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Amlong',          dosage: '5mg',    prices: [{ ph: '1mg', p: 30.00, m: 38 }, { ph: 'Netmeds', p: 32.00, m: 38 }, { ph: 'PharmEasy', p: 29.00, m: 38 }, { ph: 'Apollo Pharmacy', p: 37.50, m: 38 }]},
+  { name: 'Cilacar',         dosage: '10mg',   prices: [{ ph: '1mg', p: 98.00, m: 120 }, { ph: 'Netmeds', p: 104.00, m: 120 }, { ph: 'PharmEasy', p: 95.00, m: 120 }, { ph: 'Apollo Pharmacy', p: 118.00, m: 120 }]},
+  { name: 'Arkamin',         dosage: '0.1mg',  prices: [{ ph: '1mg', p: 18.00, m: 23 }, { ph: 'Netmeds', p: 20.00, m: 23 }, { ph: 'PharmEasy', p: 17.50, m: 23 }]},
+  { name: 'Prazopress',      dosage: '5mg',    prices: [{ ph: '1mg', p: 52.00, m: 65 }, { ph: 'Netmeds', p: 55.00, m: 65 }, { ph: 'PharmEasy', p: 50.00, m: 65 }, { ph: 'Apollo Pharmacy', p: 64.00, m: 65 }]},
+  { name: 'Inderal',         dosage: '40mg',   prices: [{ ph: '1mg', p: 15.00, m: 19 }, { ph: 'Netmeds', p: 16.50, m: 19 }, { ph: 'PharmEasy', p: 14.50, m: 19 }, { ph: 'Apollo Pharmacy', p: 18.50, m: 19 }]},
+  { name: 'Telmikind',       dosage: '40mg',   prices: [{ ph: '1mg', p: 62.00, m: 78 }, { ph: 'Netmeds', p: 66.00, m: 78 }, { ph: 'PharmEasy', p: 60.00, m: 78 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — Pain / Fever (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Saridon',         dosage: '250mg',  prices: [{ ph: '1mg', p: 22.00, m: 28 }, { ph: 'Netmeds', p: 24.00, m: 28 }, { ph: 'PharmEasy', p: 21.00, m: 28 }, { ph: 'Apollo Pharmacy', p: 27.50, m: 28 }]},
+  { name: 'Crocin Advance',  dosage: '500mg',  prices: [{ ph: '1mg', p: 32.00, m: 40 }, { ph: 'Netmeds', p: 34.50, m: 40 }, { ph: 'PharmEasy', p: 30.50, m: 40 }, { ph: 'Apollo Pharmacy', p: 39.50, m: 40 }]},
+  { name: 'Nicip',           dosage: '100mg',  prices: [{ ph: '1mg', p: 28.00, m: 35 }, { ph: 'Netmeds', p: 30.00, m: 35 }, { ph: 'PharmEasy', p: 27.00, m: 35 }]},
+  { name: 'Nise',            dosage: '100mg',  prices: [{ ph: '1mg', p: 42.00, m: 52 }, { ph: 'Netmeds', p: 45.00, m: 52 }, { ph: 'PharmEasy', p: 40.00, m: 52 }, { ph: 'Apollo Pharmacy', p: 51.00, m: 52 }]},
+  { name: 'Sumo',            dosage: '500mg',  prices: [{ ph: '1mg', p: 35.00, m: 44 }, { ph: 'Netmeds', p: 38.00, m: 44 }, { ph: 'PharmEasy', p: 34.00, m: 44 }]},
+  { name: 'Flexura D',       dosage: '250mg',  prices: [{ ph: '1mg', p: 72.00, m: 90 }, { ph: 'Netmeds', p: 76.00, m: 90 }, { ph: 'PharmEasy', p: 69.00, m: 90 }, { ph: 'Apollo Pharmacy', p: 88.00, m: 90 }]},
+  { name: 'Naprosyn',        dosage: '500mg',  prices: [{ ph: '1mg', p: 58.00, m: 72 }, { ph: 'Netmeds', p: 62.00, m: 72 }, { ph: 'PharmEasy', p: 56.00, m: 72 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — Antibiotics (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Norflox',         dosage: '400mg',  prices: [{ ph: '1mg', p: 38.00, m: 48 }, { ph: 'Netmeds', p: 41.00, m: 48 }, { ph: 'PharmEasy', p: 36.50, m: 48 }, { ph: 'Apollo Pharmacy', p: 47.00, m: 48 }]},
+  { name: 'Oflomac',         dosage: '200mg',  prices: [{ ph: '1mg', p: 52.00, m: 65 }, { ph: 'Netmeds', p: 55.00, m: 65 }, { ph: 'PharmEasy', p: 50.00, m: 65 }]},
+  { name: 'Dalacin',         dosage: '300mg',  prices: [{ ph: '1mg', p: 165.00, m: 205 }, { ph: 'Netmeds', p: 175.00, m: 205 }, { ph: 'PharmEasy', p: 160.00, m: 205 }, { ph: 'Apollo Pharmacy', p: 202.00, m: 205 }]},
+  { name: 'Zinnat',          dosage: '250mg',  prices: [{ ph: '1mg', p: 195.00, m: 240 }, { ph: 'Netmeds', p: 205.00, m: 240 }, { ph: 'PharmEasy', p: 188.00, m: 240 }, { ph: 'Apollo Pharmacy', p: 238.00, m: 240 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — GI (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Nexpro',          dosage: '40mg',   prices: [{ ph: '1mg', p: 125.00, m: 155 }, { ph: 'Netmeds', p: 132.00, m: 155 }, { ph: 'PharmEasy', p: 120.00, m: 155 }, { ph: 'Apollo Pharmacy', p: 152.00, m: 155 }]},
+  { name: 'Zinetac',         dosage: '150mg',  prices: [{ ph: '1mg', p: 22.00, m: 28 }, { ph: 'Netmeds', p: 24.00, m: 28 }, { ph: 'PharmEasy', p: 21.00, m: 28 }]},
+  { name: 'Gelusil',         dosage: '15ml',   prices: [{ ph: '1mg', p: 55.00, m: 68 }, { ph: 'Netmeds', p: 58.00, m: 68 }, { ph: 'PharmEasy', p: 52.00, m: 68 }, { ph: 'Apollo Pharmacy', p: 67.00, m: 68 }]},
+  { name: 'Mucaine',         dosage: '200ml',  prices: [{ ph: '1mg', p: 95.00, m: 118 }, { ph: 'Netmeds', p: 100.00, m: 118 }, { ph: 'PharmEasy', p: 92.00, m: 118 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — Psychiatric (more brands)
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Cipralex',        dosage: '20mg',   prices: [{ ph: '1mg', p: 165.00, m: 205 }, { ph: 'Netmeds', p: 175.00, m: 205 }, { ph: 'PharmEasy', p: 160.00, m: 205 }, { ph: 'Apollo Pharmacy', p: 202.00, m: 205 }]},
+  { name: 'Ativan',          dosage: '2mg',    prices: [{ ph: '1mg', p: 18.00, m: 23 }, { ph: 'Netmeds', p: 20.00, m: 23 }, { ph: 'PharmEasy', p: 17.50, m: 23 }]},
+  { name: 'Restyl',          dosage: '0.5mg',  prices: [{ ph: '1mg', p: 22.00, m: 28 }, { ph: 'Netmeds', p: 24.00, m: 28 }, { ph: 'PharmEasy', p: 21.00, m: 28 }, { ph: 'Apollo Pharmacy', p: 27.50, m: 28 }]},
+  { name: 'Fludac',          dosage: '20mg',   prices: [{ ph: '1mg', p: 35.00, m: 44 }, { ph: 'Netmeds', p: 38.00, m: 44 }, { ph: 'PharmEasy', p: 34.00, m: 44 }]},
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NEW — Misc common OTC
+  // ══════════════════════════════════════════════════════════════════════════════
+  { name: 'Otrivin',         dosage: '0.1%',   prices: [{ ph: '1mg', p: 72.00, m: 90 }, { ph: 'Netmeds', p: 76.00, m: 90 }, { ph: 'PharmEasy', p: 69.00, m: 90 }, { ph: 'Apollo Pharmacy', p: 88.00, m: 90 }]},
+  { name: 'Candid-B',        dosage: '1%',     prices: [{ ph: '1mg', p: 82.00, m: 102 }, { ph: 'Netmeds', p: 87.00, m: 102 }, { ph: 'PharmEasy', p: 79.00, m: 102 }, { ph: 'Apollo Pharmacy', p: 100.00, m: 102 }]},
+  { name: 'Panderm',         dosage: '15g',    prices: [{ ph: '1mg', p: 95.00, m: 118 }, { ph: 'Netmeds', p: 100.00, m: 118 }, { ph: 'PharmEasy', p: 92.00, m: 118 }]},
+  { name: 'Mintop',          dosage: '5%',     prices: [{ ph: '1mg', p: 485.00, m: 595 }, { ph: 'Netmeds', p: 508.00, m: 595 }, { ph: 'PharmEasy', p: 472.00, m: 595 }, { ph: 'Apollo Pharmacy', p: 590.00, m: 595 }]},
+  { name: 'Volini Gel',      dosage: '30g',    prices: [{ ph: '1mg', p: 92.00, m: 115 }, { ph: 'Netmeds', p: 98.00, m: 115 }, { ph: 'PharmEasy', p: 89.00, m: 115 }]},
+  { name: 'Moov',            dosage: '50g',    prices: [{ ph: '1mg', p: 88.00, m: 110 }, { ph: 'Netmeds', p: 92.00, m: 110 }, { ph: 'PharmEasy', p: 85.00, m: 110 }, { ph: 'Apollo Pharmacy', p: 108.00, m: 110 }]},
+  { name: 'Ibugesic Plus',   dosage: '400mg',  prices: [{ ph: '1mg', p: 32.00, m: 40 }, { ph: 'Netmeds', p: 34.00, m: 40 }, { ph: 'PharmEasy', p: 31.00, m: 40 }, { ph: 'Apollo Pharmacy', p: 39.00, m: 40 }]},
 ];
 
 async function getOrCreatePharmacy(name) {
