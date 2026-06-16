@@ -46,6 +46,14 @@ function stripParenDosage(saltName) {
   return saltName.replace(/\s*\([^)]*\d+\s*(mg|ml|mcg|iu|gm|g)\b[^)]*\)/gi, '').trim();
 }
 
+export function cleanMedicineName(name) {
+  if (!name) return '';
+  return name
+    .replace(/\(each.*$/i, '')
+    .replace(/\(Each.*$/i, '')
+    .trim();
+}
+
 /**
  * Clean a salt name for display:
  * - Strips parenthetical dosage info
@@ -56,7 +64,7 @@ function stripParenDosage(saltName) {
 export function getCleanSaltName(saltName) {
   if (!saltName) return '';
 
-  let cleaned = saltName;
+  let cleaned = cleanMedicineName(saltName);
 
   // Strip parenthetical dosage info: "Paracetamol (Tablet 500mg)" → "Paracetamol"
   if (hasParenDosage(cleaned)) {
@@ -88,7 +96,7 @@ export function getDisplayName(brandName, saltName) {
   // If brandName is a real brand (not a company name), prefer it
   if (brandName && !isCompanyName(brandName)) {
     // If it looks like a clean product name (not too long, not raw NPPA data)
-    const cleanBrand = brandName.replace(/\s*\([^)]*\)/g, '').trim();
+    const cleanBrand = cleanMedicineName(brandName).replace(/\s*\([^)]*\)/g, '').trim();
     if (cleanBrand.length > 0 && cleanBrand.length < 50) {
       return titleCase(cleanBrand);
     }
@@ -103,7 +111,7 @@ export function getDisplayName(brandName, saltName) {
   if (!brandName) return 'Medicine';
 
   return titleCase(
-    brandName
+    cleanMedicineName(brandName)
       .replace(/^m\/s\s+/i, '')
       .replace(/pvt\.?\s*ltd\.?/i, '')
       .trim()
