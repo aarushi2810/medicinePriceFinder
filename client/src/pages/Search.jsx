@@ -107,6 +107,25 @@ export default function Search() {
             {results.map((med, idx) => {
               const hasLivePrices = med.pharmacy_count > 1;
               const price = med.lowest_price ? parseFloat(med.lowest_price).toFixed(2) : null;
+              
+              const cleanSalt = getCleanSaltName(med.salt_name);
+              const isExact = !cleanSalt.includes('+');
+              let matchLabel = '✓ Exact ingredient match';
+              if (!isExact) {
+                const parts = cleanSalt.split('+').map(p => p.trim());
+                const q = query.trim().toLowerCase();
+                const directMatch = parts.find(p => p.toLowerCase().includes(q));
+                if (directMatch) {
+                  matchLabel = `Contains ${directMatch}`;
+                } else {
+                  const singleSalts = results
+                    .filter(r => r.salt_name && !getCleanSaltName(r.salt_name).includes('+'))
+                    .map(r => getCleanSaltName(r.salt_name).toLowerCase());
+                  const listMatch = parts.find(p => singleSalts.includes(p.toLowerCase()));
+                  matchLabel = listMatch ? `Contains ${listMatch}` : `Contains ${parts[0]}`;
+                }
+              }
+
               return (
                 <button
                   key={med.id}
@@ -128,7 +147,15 @@ export default function Search() {
                       {getDisplayName(med.brand_name, med.salt_name)}
                     </div>
                     <div style={{ fontSize: 12, color: '#888', marginTop: 3 }}>
-                      {getCleanSaltName(med.salt_name)}{med.dosage ? ` ${med.dosage}` : ''}
+                      {cleanSalt}{med.dosage ? ` ${med.dosage}` : ''}
+                    </div>
+                    <div style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      marginTop: 4,
+                      color: isExact ? '#1D9E75' : '#0284c7'
+                    }}>
+                      {matchLabel}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
