@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { comparePrices, getGenerics, explainPrice } from '../api';
-import NearbyMap from '../components/NearbyMap';
+
 import SavingsBanner from '../components/SavingsBanner';
 import GenericSavingsCard from '../components/GenericSavingsCard';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
@@ -113,10 +113,10 @@ export default function Results() {
             📋 Government Reference Price: ₹{formatPrice(prices[0]?.price)} per {medicine.unit_of_packing || 'unit'}
           </div>
           <p style={{ fontSize: 13, color: '#666', margin: '0 0 8px' }}>
-            This is the NPPA-regulated maximum retail price.
+            This is the government-regulated ceiling price under the Drug Price Control Order (DPCO).
           </p>
           <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
-            Live pharmacy comparison coming soon.
+            Live pharmacy comparison coming soon for this medicine.
           </p>
         </div>
       )}
@@ -138,12 +138,12 @@ export default function Results() {
             <StatBox label="Max savings"    value={`₹${formatPrice(summary.max_savings)}`}
               color="#1D9E75" />
           )}
-          <StatBox label="NPPA ceiling"
+          <StatBox label="Govt. ceiling"
             value={summary.nppa_ceiling ? `₹${formatPrice(summary.nppa_ceiling)}/unit` : '—'} />
           {summary.nppa_breach_count > 0 && (
             <StatBox
-              label="Overcharging"
-              value={`${summary.nppa_breach_count}/${summary.pharmacy_count} pharmacies`}
+              label="Above ceiling"
+              value={`${summary.nppa_breach_count}/${summary.pharmacy_count} sources`}
               color="#E24B4A"
             />
           )}
@@ -156,10 +156,10 @@ export default function Results() {
           background: '#fff8f0', border: '1px solid #f5cba7',
           borderRadius: 8, fontSize: 13, color: '#7d4e00', lineHeight: 1.6,
         }}>
-          ⚠️ <strong>{summary.nppa_breach_count} of {summary.pharmacy_count} pharmacies</strong> are
-          charging above the NPPA government ceiling of ₹{summary.nppa_ceiling}.
-          This is unfortunately common — many pharmacies charge full MRP which exceeds
-          the regulated ceiling. The ceiling is the <em>maximum legal price</em>.
+          ⚠️ <strong>{summary.nppa_breach_count} of {summary.pharmacy_count} sources</strong> are
+          priced above the NPPA ceiling of ₹{summary.nppa_ceiling}.
+          The ceiling price is the <em>maximum retail price</em> set by the government
+          under the Drug Price Control Order (DPCO).
         </div>
       )}
 
@@ -169,8 +169,8 @@ export default function Results() {
     border: '1px solid #fde68a', borderRadius: 8,
     fontSize: 13, color: '#92400e', marginBottom: 16,
   }}>
-    📋 <strong>Reference price only</strong> — showing NPPA government approved retail
-    price. Live comparison across 1mg, Netmeds and PharmEasy coming soon.
+    📋 <strong>Reference price only</strong> — showing the government-regulated ceiling
+    price. Live comparison across 1mg, Netmeds & PharmEasy coming soon.
   </div>
 )}
 
@@ -227,11 +227,12 @@ export default function Results() {
         onSelect={(genericId) => navigate(`/results/${genericId}`)}
       />
  
-      {/* Nearby map */}
-      <NearbyMap medicineName={displayName} />
+
+      {/* Find pharmacies — opens Google Maps */}
+      <FindPharmacies medicineName={displayName} />
  
       {/* WhatsApp share */}
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #eee' }}>
+      <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #eee' }}>
         <button
           onClick={() => {
             const msg = `Found ${displayName} for ₹${formatPrice(summary?.cheapest_price)} at ${prices[0]?.pharmacy_name}. Check MedPrice for cheapest medicines near you!`;
@@ -308,7 +309,7 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
                 {price.pharmacy_name}
               </span>
               {isCheapest && <Pill text="Cheapest ✓" color="#085041" bg="#E1F5EE" />}
-              {breach      && <Pill text="⚠️ Above NPPA" color="#A32D2D" bg="#fde8e8" />}
+              {breach      && <Pill text="⚠️ Above ceiling price" color="#A32D2D" bg="#fde8e8" />}
             </div>
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>
               {price.in_stock ? '✓ In stock' : '✗ Out of stock'}
@@ -432,6 +433,93 @@ function ErrorState({ msg, onBack }) {
       >
         ← Back to search
       </button>
+    </div>
+  );
+}
+
+// ─── FindPharmacies — opens Google Maps ──────────────────────────────────────
+
+function FindPharmacies({ medicineName }) {
+  const [pincode, setPincode] = useState('');
+
+  const openGoogleMaps = (searchQuery) => {
+    const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+    window.open(url, '_blank', 'noopener');
+  };
+
+  const handlePincodeSearch = () => {
+    if (pincode.length !== 6) return;
+    openGoogleMaps(`pharmacy near ${pincode} India`);
+  };
+
+  const handleNearMe = () => {
+    openGoogleMaps('pharmacy near me');
+  };
+
+  return (
+    <div style={{
+      marginTop: 28, padding: '20px 24px',
+      border: '1px solid #eee', borderRadius: 14,
+      background: '#fafafa',
+    }}>
+      <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: '0 0 4px' }}>
+        📍 Find pharmacies nearby
+      </h3>
+      <p style={{ fontSize: 13, color: '#888', margin: '0 0 16px' }}>
+        Opens Google Maps with real pharmacies — ratings, phone numbers, directions & hours
+      </p>
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flexWrap: 'wrap' }}>
+        <input
+          value={pincode}
+          onChange={e => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          onKeyDown={e => e.key === 'Enter' && handlePincodeSearch()}
+          placeholder="Enter pincode"
+          maxLength={6}
+          style={{
+            padding: '10px 14px', borderRadius: 8,
+            border: '1.5px solid #ddd', fontSize: 15,
+            fontWeight: 500, color: '#111', width: 140,
+          }}
+        />
+        <button
+          onClick={handlePincodeSearch}
+          disabled={pincode.length !== 6}
+          style={{
+            padding: '10px 20px', borderRadius: 8, border: 'none',
+            background: pincode.length === 6 ? '#1D9E75' : '#ccc',
+            color: '#fff', cursor: pincode.length === 6 ? 'pointer' : 'default',
+            fontSize: 14, fontWeight: 600,
+            transition: 'background 0.15s',
+          }}
+        >
+          🔍 Search area
+        </button>
+        <button
+          onClick={handleNearMe}
+          style={{
+            padding: '10px 16px', borderRadius: 8,
+            border: '1px solid #1D9E75', background: '#fff',
+            color: '#1D9E75', cursor: 'pointer',
+            fontSize: 13, fontWeight: 500,
+          }}
+        >
+          📍 Near me
+        </button>
+      </div>
+
+      {medicineName && (
+        <button
+          onClick={() => openGoogleMaps(`${medicineName} pharmacy near me`)}
+          style={{
+            marginTop: 10, padding: '6px 14px', borderRadius: 20,
+            border: '1px solid #eee', background: '#fff',
+            color: '#555', cursor: 'pointer', fontSize: 12,
+          }}
+        >
+          🔎 Search "{medicineName}" on Google Maps
+        </button>
+      )}
     </div>
   );
 }

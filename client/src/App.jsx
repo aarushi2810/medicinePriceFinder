@@ -46,7 +46,7 @@ function Header() {
           fontSize: 10, padding: '2px 6px',
           background: '#E1F5EE', color: '#085041',
           borderRadius: 20, fontWeight: 500,
-        }}>NPPA verified</span>
+        }}>Govt. verified</span>
       </a>
     </nav>
   );

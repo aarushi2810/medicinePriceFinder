@@ -72,11 +72,11 @@ export default function Search() {
 
       {/* Hero */}
       <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111', marginBottom: 8 }}>
-        Check medicine prices against government rates
+        Compare medicine prices across pharmacies
       </h1>
       <p style={{ color: '#666', marginBottom: 32, fontSize: 15 }}>
-        NPPA-verified reference prices for {stats ? Number(stats.total_medicines).toLocaleString() : '840'}+ medicines.
-        {' '}Live multi-pharmacy comparison available for {stats?.medicines_with_live_prices || '50'}+ common medicines.
+        Government-verified ceiling prices for {stats ? Number(stats.total_medicines).toLocaleString() : '840'}+ medicines.
+        {' '}Live price comparison across 1mg, Netmeds, PharmEasy & Apollo for {stats?.medicines_with_live_prices || '50'}+ medicines.
       </p>
 
       {/* Search bar */}
@@ -106,50 +106,69 @@ export default function Search() {
             background: '#fff', border: '1px solid #eee',
             borderRadius: 10, marginTop: 4, zIndex: 50,
             boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-            maxHeight: 360, overflowY: 'auto',
+            maxHeight: 400, overflowY: 'auto',
           }}>
-            {results.map(med => (
-              <button
-                key={med.id}
-                onClick={() => handleSelect(med)}
-                style={{
-                  width: '100%', textAlign: 'left',
-                  padding: '12px 16px', border: 'none',
-                  background: 'none', cursor: 'pointer',
-                  borderBottom: '1px solid #f5f5f5',
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f9f9f9'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                <div>
-                  <div style={{ fontWeight: 500, fontSize: 14, color: '#111' }}>
-                    {getDisplayName(med.brand_name, med.salt_name)}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                    {med.formulation_count > 1 && `${med.formulation_count} brands available`}
-                    {getManufacturerTag(med.brand_name) && (
-                      <span style={{ marginLeft: 6, color: '#bbb' }}>· {getManufacturerTag(med.brand_name)}</span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                  {med.lowest_price && (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1D9E75' }}>
-                      {med.pharmacy_count > 1
-                        ? `from ₹${parseFloat(med.lowest_price).toFixed(2)}`
-                        : `NPPA ref. ₹${parseFloat(med.lowest_price).toFixed(2)}`}
+            {results.map((med, idx) => {
+              const hasLivePrices = med.pharmacy_count > 1;
+              const price = med.lowest_price ? parseFloat(med.lowest_price).toFixed(2) : null;
+              return (
+                <button
+                  key={med.id}
+                  onClick={() => handleSelect(med)}
+                  style={{
+                    width: '100%', textAlign: 'left',
+                    padding: '14px 16px', border: 'none',
+                    background: 'none', cursor: 'pointer',
+                    borderBottom: idx < results.length - 1 ? '1px solid #f5f5f5' : 'none',
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', gap: 12,
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8faf9'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {getDisplayName(med.brand_name, med.salt_name)}
                     </div>
-                  )}
-                  <div style={{ fontSize: 11, color: '#aaa' }}>
-                    {med.pharmacy_count > 1
-                      ? `${med.pharmacy_count} sources`
-                      : 'Reference price'}
+                    <div style={{ fontSize: 12, color: '#888', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {med.dosage && <span>{med.dosage}</span>}
+                      {med.form && <span style={{ color: '#bbb' }}>·</span>}
+                      {med.form && <span style={{ textTransform: 'capitalize' }}>{med.form}</span>}
+                      {med.formulation_count > 1 && (
+                        <span style={{
+                          fontSize: 11, padding: '1px 6px', borderRadius: 10,
+                          background: '#f0f0f0', color: '#666',
+                        }}>
+                          {med.formulation_count} brands
+                        </span>
+                      )}
+                      {getManufacturerTag(med.brand_name) && (
+                        <span style={{ color: '#bbb' }}>· {getManufacturerTag(med.brand_name)}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {price && (
+                      <div style={{ fontSize: 14, fontWeight: 700, color: hasLivePrices ? '#1D9E75' : '#666' }}>
+                        ₹{price}
+                      </div>
+                    )}
+                    {hasLivePrices ? (
+                      <div style={{
+                        fontSize: 11, color: '#1D9E75', marginTop: 2,
+                        display: 'flex', alignItems: 'center', gap: 3,
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', display: 'inline-block' }} />
+                        {med.pharmacy_count} pharmacies
+                      </div>
+                    ) : price ? (
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Govt. ceiling price</div>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -208,9 +227,9 @@ export default function Search() {
       {stats && (
         <div style={{ marginTop: 60, display: 'flex', gap: 32, borderTop: '1px solid #eee', paddingTop: 24, flexWrap: 'wrap' }}>
           {[
-            { n: `${Number(stats.total_medicines).toLocaleString()}+`, label: 'Medicines in database' },
-            { n: stats.ceiling_prices, label: 'NPPA ceiling prices', sub: 'Government regulated' },
-            { n: stats.medicines_with_live_prices, label: 'With multi-pharmacy comparison',
+            { n: `${Number(stats.total_medicines).toLocaleString()}+`, label: 'Medicines tracked' },
+            { n: stats.ceiling_prices, label: 'Govt. ceiling prices', sub: 'DPCO regulated' },
+            { n: stats.medicines_with_live_prices, label: 'With live comparison',
               color: stats.medicines_with_live_prices > 30 ? '#1D9E75' : '#888' },
           ].map(s => (
             <div key={s.label}>
@@ -223,7 +242,7 @@ export default function Search() {
       )}
 
       <p style={{ fontSize: 11, color: '#aaa', marginTop: 12, textAlign: 'center' }}>
-        "Reference price" = NPPA government-approved price. "Live comparison" = real prices across 1mg, Netmeds, PharmEasy for select medicines.
+        Ceiling prices are set by the government under the Drug Price Control Order (DPCO). Live comparison shows actual prices across 1mg, Netmeds, PharmEasy & Apollo.
       </p>
     </div>
   );

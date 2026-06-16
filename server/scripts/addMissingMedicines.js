@@ -88,7 +88,64 @@ const MISSING_MEDICINES = [
   { brand: 'Seroflo', salt: 'Salmeterol + Fluticasone', dosage: '250mcg', form: 'other', ceiling: 480.00 },
   { brand: 'Zerodol-P', salt: 'Aceclofenac + Paracetamol', dosage: '100mg/325mg', form: 'tablet', ceiling: 6.20 },
   { brand: 'Hifenac', salt: 'Aceclofenac 100mg', dosage: '100mg', form: 'tablet', ceiling: 4.50 },
-  { brand: 'Flexon', salt: 'Ibuprofen + Paracetamol', dosage: '400mg/325mg', form: 'tablet', ceiling: 3.50 }
+  { brand: 'Flexon', salt: 'Ibuprofen + Paracetamol', dosage: '400mg/325mg', form: 'tablet', ceiling: 3.50 },
+
+  // ── New batch: Antihypertensive ──
+  { brand: 'Telma-H', salt: 'Telmisartan + Hydrochlorothiazide 40mg/12.5mg', dosage: '40mg/12.5mg', form: 'tablet', ceiling: 9.80 },
+  { brand: 'Losar', salt: 'Losartan 50mg', dosage: '50mg', form: 'tablet', ceiling: 7.80 },
+  { brand: 'Envas', salt: 'Enalapril 5mg', dosage: '5mg', form: 'tablet', ceiling: 4.20 },
+  { brand: 'Olmezest', salt: 'Olmesartan 20mg', dosage: '20mg', form: 'tablet', ceiling: 12.50 },
+  { brand: 'Dytor', salt: 'Torsemide 10mg', dosage: '10mg', form: 'tablet', ceiling: 5.80 },
+  { brand: 'Minipress XL', salt: 'Prazosin 5mg', dosage: '5mg', form: 'tablet', ceiling: 8.50 },
+
+  // ── New batch: Diabetes ──
+  { brand: 'Glimisave', salt: 'Glimepiride 2mg', dosage: '2mg', form: 'tablet', ceiling: 7.50 },
+  { brand: 'Pioz', salt: 'Pioglitazone 15mg', dosage: '15mg', form: 'tablet', ceiling: 6.80 },
+  { brand: 'Forxiga', salt: 'Dapagliflozin 10mg', dosage: '10mg', form: 'tablet', ceiling: 45.00 },
+  { brand: 'Jardiance', salt: 'Empagliflozin 25mg', dosage: '25mg', form: 'tablet', ceiling: 48.00 },
+  { brand: 'Lantus', salt: 'Insulin Glargine 100IU/ml', dosage: '100IU/ml', form: 'injection', ceiling: 820.00 },
+  { brand: 'Volix', salt: 'Voglibose 0.3mg', dosage: '0.3mg', form: 'tablet', ceiling: 8.50 },
+
+  // ── New batch: Gastric / Liver ──
+  { brand: 'Domstal', salt: 'Domperidone 10mg', dosage: '10mg', form: 'tablet', ceiling: 2.80 },
+  { brand: 'Rabesec', salt: 'Rabeprazole 20mg', dosage: '20mg', form: 'capsule', ceiling: 9.80 },
+  { brand: 'Udiliv', salt: 'Ursodeoxycholic Acid 300mg', dosage: '300mg', form: 'tablet', ceiling: 18.50 },
+  { brand: 'Vomikind', salt: 'Ondansetron 4mg', dosage: '4mg', form: 'tablet', ceiling: 5.50 },
+
+  // ── New batch: Neuro / Pain ──
+  { brand: 'Pregabalin', salt: 'Pregabalin 75mg', dosage: '75mg', form: 'capsule', ceiling: 12.50 },
+  { brand: 'Gabantin', salt: 'Gabapentin 300mg', dosage: '300mg', form: 'capsule', ceiling: 8.50 },
+  { brand: 'Ultracet', salt: 'Tramadol + Paracetamol 37.5mg/325mg', dosage: '37.5mg/325mg', form: 'tablet', ceiling: 6.80 },
+  { brand: 'Tryptomer', salt: 'Amitriptyline 25mg', dosage: '25mg', form: 'tablet', ceiling: 3.20 },
+
+  // ── New batch: Cardiac ──
+  { brand: 'Clopitab', salt: 'Clopidogrel 75mg', dosage: '75mg', form: 'tablet', ceiling: 8.50 },
+  { brand: 'Ecosprin AV', salt: 'Aspirin + Atorvastatin 75mg/10mg', dosage: '75mg/10mg', form: 'capsule', ceiling: 12.80 },
+  { brand: 'Betaloc', salt: 'Metoprolol 50mg', dosage: '50mg', form: 'tablet', ceiling: 5.50 },
+  { brand: 'Dilzem', salt: 'Diltiazem 30mg', dosage: '30mg', form: 'tablet', ceiling: 4.80 },
+
+  // ── New batch: Antibiotics ──
+  { brand: 'Levoflox', salt: 'Levofloxacin 500mg', dosage: '500mg', form: 'tablet', ceiling: 12.50 },
+  { brand: 'Furadantin', salt: 'Nitrofurantoin 100mg', dosage: '100mg', form: 'capsule', ceiling: 6.80 },
+  { brand: 'Doxt-SL', salt: 'Doxycycline 100mg', dosage: '100mg', form: 'capsule', ceiling: 8.50 },
+  { brand: 'Metrogyl', salt: 'Metronidazole 400mg', dosage: '400mg', form: 'tablet', ceiling: 3.80 },
+
+  // ── New batch: Vitamins / Supplements ──
+  { brand: 'Folvite', salt: 'Folic Acid 5mg', dosage: '5mg', form: 'tablet', ceiling: 0.80 },
+  { brand: 'Methycobal', salt: 'Methylcobalamin 500mcg', dosage: '500mcg', form: 'tablet', ceiling: 5.50 },
+  { brand: 'CCM', salt: 'Calcium Citrate Malate + D3', dosage: '500mg', form: 'tablet', ceiling: 12.00 },
+  { brand: 'Zincovit', salt: 'Multivitamin + Zinc', dosage: '', form: 'tablet', ceiling: 8.50 },
+
+  // ── New batch: Skin / Allergy ──
+  { brand: 'Montair LC', salt: 'Montelukast + Levocetirizine', dosage: '10mg/5mg', form: 'tablet', ceiling: 12.50 },
+  { brand: 'Levocet', salt: 'Levocetirizine 5mg', dosage: '5mg', form: 'tablet', ceiling: 3.20 },
+  { brand: 'HCQS', salt: 'Hydroxychloroquine 200mg', dosage: '200mg', form: 'tablet', ceiling: 6.50 },
+  { brand: 'Wysolone', salt: 'Prednisolone 10mg', dosage: '10mg', form: 'tablet', ceiling: 4.80 },
+
+  // ── New batch: Women's Health ──
+  { brand: 'Susten', salt: 'Progesterone 200mg', dosage: '200mg', form: 'capsule', ceiling: 25.00 },
+  { brand: 'Premarin', salt: 'Conjugated Estrogen 0.625mg', dosage: '0.625mg', form: 'tablet', ceiling: 12.50 },
+  { brand: 'Letoval', salt: 'Letrozole 2.5mg', dosage: '2.5mg', form: 'tablet', ceiling: 15.00 }
 ];
 
 async function main() {
