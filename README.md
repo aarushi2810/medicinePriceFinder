@@ -3,7 +3,7 @@
 Compare medicine prices against official government rates, find generic alternatives, and locate nearby pharmacies — built for the Indian healthcare market.
 
 **Live demo:** [medicine-price-finder.vercel.app](https://medicine-price-finder.vercel.app)
-**Backend API:** Deployed on Railway
+**Backend API:** Deployed on Render
 
 ---
 
