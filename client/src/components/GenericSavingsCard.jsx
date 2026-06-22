@@ -1,3 +1,4 @@
+import { FlaskConical, Lightbulb } from 'lucide-react';
 import { getDisplayName, getCleanSaltName } from '../utils/medicineNames';
 
 export default function GenericSavingsCard({ generics, currentMedicine, currentPrice, onSelect }) {
@@ -23,7 +24,7 @@ export default function GenericSavingsCard({ generics, currentMedicine, currentP
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 20 }}>💡</span>
+        <Lightbulb size={20} color="#1D9E75" />
         <h2 style={{ fontSize: 17, fontWeight: 700, color: '#085041', margin: 0 }}>
           Generic Alternatives
         </h2>
@@ -38,8 +39,9 @@ export default function GenericSavingsCard({ generics, currentMedicine, currentP
           borderRadius: 8,
           display: 'inline-block',
         }}>
-          <span style={{ fontSize: 12, color: '#065f46' }}>
-            🧪 Active ingredient: <strong>{cleanSalt}</strong>
+          <span style={{ fontSize: 12, color: '#065f46', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <FlaskConical size={14} />
+            Active ingredient: <strong>{cleanSalt}</strong>
           </span>
         </div>
       )}

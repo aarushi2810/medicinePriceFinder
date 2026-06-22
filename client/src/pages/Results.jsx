@@ -1,22 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { comparePrices, getGenerics } from '../api';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Bot,
+  CheckCircle,
+  ClipboardList,
+  ExternalLink,
+  Globe2,
+  Hospital,
+  Inbox,
+  MapPin,
+  Navigation,
+  Search as SearchIcon,
+  Share2,
+  XCircle,
+} from 'lucide-react';
+import { comparePrices, getGenerics, explainPrice } from '../api';
 
 import SavingsBanner from '../components/SavingsBanner';
 import GenericSavingsCard from '../components/GenericSavingsCard';
 import { getDisplayName, getManufacturerTag } from '../utils/medicineNames';
 import { getCompositionText } from '../utils/parseMedicineName';
-import ExplainPrice from '../components/ExplainPrice';
  
 // ─── Helpers ─────────────────────────────────────────────────────────────────
  
 
-function shortDosage(dosage) {
-  if (!dosage) return '';
-  const cleaned = dosage.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
-  return cleaned.length > 70 ? cleaned.slice(0, 70) + '…' : cleaned;
-}
- 
 function formatPrice(val) {
   return parseFloat(val || 0).toFixed(2);
 }
@@ -30,30 +39,42 @@ export default function Results() {
   const [generics, setGenerics] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
+  const [loadedId, setLoadedId] = useState(null);
  
   useEffect(() => {
-    setLoading(true);
-    setData(null);
-    setGenerics([]);
-    setError('');
+    let cancelled = false;
  
     Promise.all([comparePrices(id), getGenerics(id)])
       .then(([compareData, genericsData]) => {
+        if (cancelled) return;
         setData(compareData);
         setGenerics(genericsData.generics || []);
+        setError('');
+        setLoadedId(id);
       })
-      .catch(() => setError('Failed to load prices. Try searching again.'))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (cancelled) return;
+        setData(null);
+        setGenerics([]);
+        setError('Failed to load prices. Try searching again.');
+        setLoadedId(id);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
  
-  if (loading) return <LoadingState />;
+  if (loading || loadedId !== id) return <LoadingState />;
   if (error)   return <ErrorState msg={error} onBack={() => navigate('/')} />;
   if (!data)   return null;
  
   const { medicine, prices, summary } = data;
  
   const displayName  = getDisplayName(medicine.brand_name, medicine.salt_name);
-  const manufacturerTag = getManufacturerTag(medicine.brand_name);
  
   const cheapestPrice = summary?.cheapest_price || 0;
   const avgPrice      = prices.length
@@ -76,7 +97,8 @@ export default function Results() {
           padding: '6px 0', display: 'flex', alignItems: 'center', gap: 4,
         }}
       >
-        ← Back to search
+        <ArrowLeft size={15} />
+        Back to search
       </button>
  
       {/* Medicine header */}
@@ -110,8 +132,12 @@ export default function Results() {
           padding: '24px', background: '#f9fffe', marginBottom: 28,
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#085041', marginBottom: 10 }}>
-            📋 Government Reference Price: ₹{formatPrice(prices[0]?.price)} per {medicine.unit_of_packing || 'unit'}
+          <div style={{
+            fontSize: 16, fontWeight: 600, color: '#085041', marginBottom: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            <ClipboardList size={18} />
+            Government Reference Price: ₹{formatPrice(prices[0]?.price)} per {medicine.unit_of_packing || 'unit'}
           </div>
           <p style={{ fontSize: 13, color: '#666', margin: 0 }}>
             This is the government-regulated ceiling price under the Drug Price Control Order (DPCO).
@@ -153,11 +179,15 @@ export default function Results() {
           margin: '0 0 20px', padding: '10px 14px',
           background: '#fff8f0', border: '1px solid #f5cba7',
           borderRadius: 8, fontSize: 13, color: '#7d4e00', lineHeight: 1.6,
+          display: 'flex', gap: 8, alignItems: 'flex-start',
         }}>
-          ⚠️ <strong>{summary.nppa_breach_count} of {summary.pharmacy_count} sources</strong> are
-          priced above the NPPA ceiling of ₹{summary.nppa_ceiling}.
-          The ceiling price is the <em>maximum retail price</em> set by the government
-          under the Drug Price Control Order (DPCO).
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            <strong>{summary.nppa_breach_count} of {summary.pharmacy_count} sources</strong> are
+            priced above the NPPA ceiling of ₹{summary.nppa_ceiling}.
+            The ceiling price is the <em>maximum retail price</em> set by the government
+            under the Drug Price Control Order (DPCO).
+          </span>
         </div>
       )}
 
@@ -166,8 +196,10 @@ export default function Results() {
     padding: '8px 14px', background: '#fffbeb',
     border: '1px solid #fde68a', borderRadius: 8,
     fontSize: 13, color: '#92400e', marginBottom: 16,
+    display: 'flex', alignItems: 'center', gap: 8,
   }}>
-    📋 <strong>Reference price only</strong> — showing the government-regulated ceiling price.
+    <ClipboardList size={16} />
+    <span><strong>Reference price only</strong> — showing the government-regulated ceiling price.</span>
   </div>
 )}
 
@@ -176,9 +208,10 @@ export default function Results() {
     padding: '8px 14px', background: '#E1F5EE',
     border: '1px solid #6ee7b7', borderRadius: 8,
     fontSize: 13, color: '#065f46', marginBottom: 16,
+    display: 'flex', alignItems: 'center', gap: 8,
   }}>
-    ✓ <strong>Live comparison available</strong> — prices verified across
-    {prices.length} sources
+    <CheckCircle size={16} />
+    <span><strong>Live comparison available</strong> — prices verified across {prices.length} sources</span>
   </div>
 )}
 
@@ -243,7 +276,8 @@ export default function Results() {
             fontSize: 14, fontWeight: 500,
           }}
         >
-          <span>📤</span> Share on WhatsApp
+          <Share2 size={16} />
+          Share on WhatsApp
         </button>
       </div>
  
@@ -298,18 +332,18 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
             display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: 18, flexShrink: 0,
           }}>
-            {isOnline ? '🌐' : '🏥'}
+            {isOnline ? <Globe2 size={18} color="#1D9E75" /> : <Hospital size={18} color="#666" />}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5 }}>
               <span style={{ fontWeight: 500, fontSize: 15, color: '#111' }}>
                 {price.pharmacy_name}
               </span>
-              {isCheapest && <Pill text="Cheapest ✓" color="#085041" bg="#E1F5EE" />}
-              {breach      && <Pill text="⚠️ Above ceiling price" color="#A32D2D" bg="#fde8e8" />}
+              {isCheapest && <Pill text="Cheapest" color="#085041" bg="#E1F5EE" icon={<CheckCircle size={11} />} />}
+              {breach      && <Pill text="Above ceiling price" color="#A32D2D" bg="#fde8e8" icon={<AlertTriangle size={11} />} />}
             </div>
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>
-              {price.in_stock ? '✓ In stock' : '✗ Out of stock'}
+              {price.in_stock ? 'In stock' : 'Out of stock'}
               {price.discount_pct > 0 && ` · ${price.discount_pct}% off MRP`}
               {price.updated_at && ` · ${new Date(price.updated_at).toLocaleDateString('en-IN')}`}
             </div>
@@ -345,9 +379,10 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
               background: 'none', border: 'none', cursor: 'pointer',
               color: '#999', fontSize: 12, padding: 0,
               textDecoration: 'underline', textDecorationStyle: 'dotted',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
             }}
           >
-            {explaining ? '⏳ Analysing...' : '🤖 Why this price?'}
+            {explaining ? 'Analysing...' : <><Bot size={13} /> Why this price?</>}
           </button>
         )}
         {explanation && (
@@ -375,12 +410,14 @@ function StatBox({ label, value, color = '#111' }) {
   );
 }
  
-function Pill({ text, color, bg }) {
+function Pill({ text, color, bg, icon }) {
   return (
     <span style={{
       fontSize: 11, padding: '2px 8px', borderRadius: 20,
       background: bg, color, fontWeight: 500,
+      display: 'inline-flex', alignItems: 'center', gap: 4,
     }}>
+      {icon}
       {text}
     </span>
   );
@@ -392,7 +429,7 @@ function EmptyPrices() {
       textAlign: 'center', padding: '32px 20px',
       border: '1px dashed #eee', borderRadius: 10, color: '#aaa',
     }}>
-      <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+      <Inbox size={32} color="#aaa" style={{ marginBottom: 8 }} />
       <p style={{ fontSize: 14, margin: 0 }}>No pharmacy prices found yet.</p>
       <p style={{ fontSize: 12, marginTop: 4, color: '#bbb' }}>
         Prices are updated weekly from verified sources.
@@ -418,7 +455,7 @@ function LoadingState() {
 function ErrorState({ msg, onBack }) {
   return (
     <div style={{ maxWidth: 720, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
-      <div style={{ fontSize: 36, marginBottom: 12 }}>❌</div>
+      <XCircle size={36} color="#E24B4A" style={{ marginBottom: 12 }} />
       <p style={{ color: '#E24B4A', marginBottom: 16, fontSize: 14 }}>{msg}</p>
       <button
         onClick={onBack}
@@ -428,7 +465,10 @@ function ErrorState({ msg, onBack }) {
           fontSize: 14, background: '#fff',
         }}
       >
-        ← Back to search
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <ArrowLeft size={14} />
+          Back to search
+        </span>
       </button>
     </div>
   );
@@ -460,7 +500,10 @@ function FindPharmacies({ medicineName }) {
       background: '#fafafa',
     }}>
       <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: '0 0 16px' }}>
-        📍 Find pharmacies nearby
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <MapPin size={17} color="#1D9E75" />
+          Find pharmacies nearby
+        </span>
       </h3>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flexWrap: 'wrap' }}>
@@ -485,9 +528,11 @@ function FindPharmacies({ medicineName }) {
             color: '#fff', cursor: pincode.length === 6 ? 'pointer' : 'default',
             fontSize: 14, fontWeight: 600,
             transition: 'background 0.15s',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
-          🔍 Search area
+          <SearchIcon size={15} />
+          Search area
         </button>
         <button
           onClick={handleNearMe}
@@ -496,9 +541,11 @@ function FindPharmacies({ medicineName }) {
             border: '1px solid #1D9E75', background: '#fff',
             color: '#1D9E75', cursor: 'pointer',
             fontSize: 13, fontWeight: 500,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
-          📍 Near me
+          <Navigation size={15} />
+          Near me
         </button>
       </div>
 
@@ -509,9 +556,11 @@ function FindPharmacies({ medicineName }) {
             marginTop: 10, padding: '6px 14px', borderRadius: 20,
             border: '1px solid #eee', background: '#fff',
             color: '#555', cursor: 'pointer', fontSize: 12,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
-          🔎 Search "{medicineName}" on Google Maps
+          <ExternalLink size={13} />
+          Search "{medicineName}" on Google Maps
         </button>
       )}
     </div>

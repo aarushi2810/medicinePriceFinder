@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Camera, CheckCircle } from 'lucide-react';
 import { ocrPrescription } from '../api';
 
 export default function PrescriptionOCR({ onMedicinesFound }) {
@@ -59,7 +60,7 @@ export default function PrescriptionOCR({ onMedicinesFound }) {
       >
         {loading
           ? <><span style={spinner} />Reading prescription with AI...</>
-          : <>📷 Scan prescription — AI finds all medicines</>
+          : <><Camera size={16} />Scan prescription — AI finds all medicines</>
         }
       </button>
 
@@ -72,7 +73,10 @@ export default function PrescriptionOCR({ onMedicinesFound }) {
         <div style={{ marginTop: 10, padding: 12, background: '#f9fffe',
                       borderRadius: 8, border: '1px solid #E1F5EE' }}>
           <p style={{ fontSize: 12, color: '#085041', fontWeight: 500, marginBottom: 8 }}>
-            ✓ Found {found.length} medicines — tap to search each:
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle size={14} />
+              Found {found.length} medicines — tap to search each:
+            </span>
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {found.map((m, i) => (

@@ -1,4 +1,5 @@
-import { getDisplayName, getCleanSaltName } from '../utils/medicineNames';
+import { BadgeCheck, BadgeDollarSign, Info, TrendingUp } from 'lucide-react';
+import { getDisplayName } from '../utils/medicineNames';
 
 export default function SavingsBanner({ currentMedicine, currentPrice, generics, onSwitchToGeneric }) {
   if (!generics || generics.length === 0 || !currentPrice) return null;
@@ -19,7 +20,7 @@ export default function SavingsBanner({ currentMedicine, currentPrice, generics,
         background: '#E1F5EE', border: '1px solid #6ee7b7',
         marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span style={{ fontSize: 16 }}>✓</span>
+        <BadgeCheck size={16} color="#065f46" />
         <span style={{ fontSize: 13, color: '#065f46', fontWeight: 500 }}>
           You're already viewing the most affordable option
         </span>
@@ -50,7 +51,10 @@ export default function SavingsBanner({ currentMedicine, currentPrice, generics,
         fontSize: 18, fontWeight: 700, color: '#065f46',
         marginBottom: 16, lineHeight: 1.4,
       }}>
-        💰 Save up to ₹{savings.toFixed(2)} ({savingsPct}%) with a generic alternative
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <BadgeDollarSign size={22} />
+          Save up to ₹{savings.toFixed(2)} ({savingsPct}%) with a generic alternative
+        </span>
       </div>
 
       {/* Comparison visual */}
@@ -117,7 +121,10 @@ export default function SavingsBanner({ currentMedicine, currentPrice, generics,
           fontSize: 13, color: '#065f46', marginBottom: 14,
           fontWeight: 500, textAlign: 'center',
         }}>
-          📊 That's ₹{Math.round(monthlySavings)}/month or ₹{Math.round(yearlySavings)}/year saved!
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <TrendingUp size={15} />
+            That's ₹{Math.round(monthlySavings)}/month or ₹{Math.round(yearlySavings)}/year saved!
+          </span>
         </div>
       )}
 
@@ -140,7 +147,7 @@ export default function SavingsBanner({ currentMedicine, currentPrice, generics,
         onMouseEnter={e => e.currentTarget.style.background = '#178a65'}
         onMouseLeave={e => e.currentTarget.style.background = '#1D9E75'}
       >
-        Switch to Generic →
+        Switch to Generic
       </button>
 
       {/* Educational note */}
@@ -148,7 +155,7 @@ export default function SavingsBanner({ currentMedicine, currentPrice, generics,
         fontSize: 11, color: '#6b7280', lineHeight: 1.5,
         display: 'flex', gap: 6, alignItems: 'flex-start',
       }}>
-        <span style={{ flexShrink: 0 }}>ℹ️</span>
+        <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
           Generic medicines contain the same active ingredient and are equally effective
           as per FDA/CDSCO guidelines.

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search as SearchIcon } from 'lucide-react';
 import { searchMedicines } from '../api';
 import PrescriptionOCR from '../components/PrescriptionOCR';
 import { getDisplayName, getCleanSaltName } from '../utils/medicineNames';
@@ -25,7 +26,7 @@ export default function Search() {
 
   // Debounced search — 300ms
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); setOpen(false); return; }
+    if (query.trim().length < 2) return;
 
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -59,6 +60,14 @@ export default function Search() {
     navigate(`/results/${medicine.id}`);
   };
 
+  const handleQueryChange = (value) => {
+    setQuery(value);
+    if (value.trim().length < 2) {
+      setResults([]);
+      setOpen(false);
+    }
+  };
+
   const handleOcrResults = (medicines) => {
     if (medicines.length === 1) {
       setQuery(`${medicines[0].name} ${medicines[0].dosage}`);
@@ -84,10 +93,10 @@ export default function Search() {
           boxShadow: open ? '0 4px 20px rgba(0,0,0,0.08)' : 'none',
           transition: 'box-shadow 0.15s',
         }}>
-          <span style={{ marginRight: 10, fontSize: 18 }}>🔍</span>
+          <SearchIcon size={18} color="#888" style={{ marginRight: 10, flexShrink: 0 }} />
           <input
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => handleQueryChange(e.target.value)}
             placeholder="Search by medicine or salt name (e.g. Paracetamol, Crocin)"
             style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#111', background: 'transparent' }}
             autoFocus
@@ -110,7 +119,7 @@ export default function Search() {
               
               const cleanSalt = getCleanSaltName(med.salt_name);
               const isExact = !cleanSalt.includes('+');
-              let matchLabel = '✓ Exact ingredient match';
+              let matchLabel = 'Exact ingredient match';
               if (!isExact) {
                 const parts = cleanSalt.split('+').map(p => p.trim());
                 const q = query.trim().toLowerCase();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Bot } from 'lucide-react';
 import { explainPrice } from '../api';
 
 export default function ExplainPrice({ medicine, pharmacy, price, cheapestPrice, nppaCeiling, avgPrice }) {
@@ -28,9 +29,10 @@ export default function ExplainPrice({ medicine, pharmacy, price, cheapestPrice,
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: '#666', fontSize: 12, padding: 0, textDecoration: 'underline',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
           }}
         >
-          {loading ? 'Analysing...' : '🤖 Why this price?'}
+          {loading ? 'Analysing...' : <><Bot size={13} /> Why this price?</>}
         </button>
       )}
       {explanation && (

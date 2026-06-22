@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MedPrice 💊
 ### Smart Medicine Price Comparison for India
 
@@ -5,11 +6,20 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-medicine--price--finder.vercel.app-brightgreen)](https://medicine-price-finder.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+=======
+# MedPrice — Indian Medicine Price & Generic Alternative Finder
+
+MedPrice is a modern medicine price comparison and generic alternative discovery platform built for the Indian healthcare market. It helps patients compare retail drug prices across major online pharmacies, check them against government-mandated price ceilings (DPCO/NPPA), locate nearby physical pharmacies, and find cheaper generic equivalents.
+
+**Live Demo:** [medicine-price-finder.vercel.app](https://medicine-price-finder.vercel.app)  
+**Backend API:** Deployed on Railway  
+>>>>>>> 5d8f2c4 (removed emojis from ui)
 
 ---
 
-## The Problem
+## 💡 The Problem
 
+<<<<<<< HEAD
 Medicine prices in India vary **30–50% across pharmacy chains** for identical drugs and dosages. A patient buying Calpol 500mg at Netmeds may pay ₹27 while PharmEasy charges ₹24.90 — and both may be charging above the government-regulated NPPA ceiling price of ₹23. No transparent comparison tool existed for consumers to find the cheapest nearby source before purchasing.
 
 ---
@@ -17,19 +27,52 @@ Medicine prices in India vary **30–50% across pharmacy chains** for identical 
 ## What MedPrice Does
 
 MedPrice aggregates medicine pricing data from multiple pharmacy sources, cross-references it against NPPA government ceiling prices, suggests cheaper generic alternatives, and shows nearby pharmacies — all from a single search.
+=======
+Prescription medicine prices in India vary by 30–150% across pharmacy chains for the *exact same drug and dosage*, with no easy way for patients to compare. Meanwhile, the National Pharmaceutical Pricing Authority (NPPA) publishes legal price ceilings for hundreds of essential drugs — but this data is locked away in unreadable government PDFs/spreadsheets that patients never see.
+
+**MedPrice unlocks this data** by presenting it in a searchable, comparable, and patient-friendly interface.
+>>>>>>> 5d8f2c4 (removed emojis from ui)
 
 ---
 
-## Features
+## ✨ Key Features
 
+<<<<<<< HEAD
 ### 🔍 Smart Medicine Search
 Search by brand name, generic/salt name, or active ingredient. Results are ranked by relevance — exact brand matches first, then salt-name matches, with tablets and capsules prioritized over injections and syrups for consumer-intent queries.
+=======
+1. **Smart Medicine Search & Auto-Ranking**
+   - Search by brand name (e.g., *Calpol*) or active ingredient (e.g., *Paracetamol*).
+   - Smart ranking prioritizing single-ingredient exact matches at the top, pushing combination drugs (containing multiple active ingredients) to the bottom.
+
+2. **Clean Display & UI badges**
+   - Long, ugly parenthetical dosage compositions from raw government data are automatically stripped and title-cased.
+   - Clean, lightweight dropdown cards containing only essential information (Name, Clean Salt + Dosage, Price, Availability).
+   - Match relevance badges indicating if a result is a `✓ Exact ingredient match` or `Contains [Matched Ingredient]` (e.g., searching *Paracetamol* labels *Flexon* with `Contains Paracetamol` so users understand the connection).
+
+3. **Brand-to-Generic Savings Analyzer**
+   - Prominent, high-fidelity **Savings Banner** detailing percentage savings, the cheapest generic brand alternative, and monthly/yearly cost projections.
+   - **Generic Alternatives Comparison Card** displaying a side-by-side pricing matrix of all therapeutically equivalent brands with exact rupee savings.
+
+4. **NPPA Regulation Check**
+   - Automatically cross-checks retail prices against the legal NPPA maximum retail price (MRP).
+   - Flags illegal overcharging ("NPPA breaches") in real-time.
+
+5. **Advanced Nearby Pharmacy Locator**
+   - Pincode-first search UX with GPS fallback.
+   - Proxies OpenStreetMap Overpass API and Nominatim geocoding on the server.
+   - Returns a Leaflet map along with a detailed card list showing pharmacy name, address details, distance in kilometers, opening hours, phone number, and direct Google Maps navigation buttons.
+
+6. **Prescription OCR Scanner**
+   - Scan prescription photos using Gemini Vision API to automatically extract medicine names and dosages and search for them instantly.
+>>>>>>> 5d8f2c4 (removed emojis from ui)
 
 ```
 "Crocin" → Crocin 500mg (Paracetamol) · from ₹27.80 · 5 pharmacies
 "pa"     → Paracetamol 500mg brands first, not injections or unrelated drugs
 ```
 
+<<<<<<< HEAD
 ### 💰 Multi-Pharmacy Price Comparison
 Side-by-side prices from 1mg, Netmeds, PharmEasy, and Apollo. Results sorted cheapest first with:
 - Savings % vs MRP
@@ -165,8 +208,36 @@ Indexes:
 - Gemini API key (for OCR and price explanation)
 
 ### Installation
+=======
+## 🛠️ Technology Stack
 
+* **Frontend**: React (Vite), React Router v7, Leaflet (Maps), CSS-in-JS.
+* **Backend**: Node.js, Express, PostgreSQL, In-memory Node Cache (5-min TTL).
+* **AI & External APIs**: Google Gemini API (OCR + AI Price Explainer), OpenStreetMap Overpass API (mirroring across 3 endpoints with parallel requests & timeouts), Nominatim Geocoding.
+* **Deployment**: Frontend on Vercel, Backend & Database on Railway.
+
+---
+
+## 📊 Live Database Statistics
+* **Tracked Medicines**: 730+
+* **Govt. Ceiling Prices (DPCO regulated)**: 970+
+* **Medicines with Active Pharmacy Comparison**: 160+
+* **Seeded Pharmacy Price Points**: 560+
+
+---
+
+## ⚙️ Local Development Setup
+
+### Prerequisites
+* Node.js (v18+)
+* PostgreSQL (v14+)
+* A free Gemini API key from [Google AI Studio](https://aistudio.google.com)
+>>>>>>> 5d8f2c4 (removed emojis from ui)
+
+### 1. Database Setup
+Create a local PostgreSQL database:
 ```bash
+<<<<<<< HEAD
 # Clone repository
 git clone https://github.com/aarushi2810/medicinePriceFinder.git
 cd medicinePriceFinder
@@ -298,3 +369,77 @@ Built to improve healthcare affordability through transparent medicine pricing a
 ---
 
 *MedPrice is an independent project. Medicine prices and NPPA data are for informational purposes. Always consult a licensed pharmacist or physician before making medication decisions.*
+=======
+createdb medicine_finder
+```
+
+### 2. Backend Server Setup
+1. Navigate to the server folder and install dependencies:
+   ```bash
+   cd server
+   npm install
+   ```
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Open `.env` and fill in:
+   ```env
+   DATABASE_URL=postgresql://localhost:5432/medicine_finder
+   PORT=8000
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+3. Initialize schema and seed the database:
+   ```bash
+   psql -d medicine_finder -f db/schema.sql
+   node scripts/loadNppaData.js
+   node scripts/addBatch38.js
+   node scripts/quickSeed.js
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### 3. Frontend Client Setup
+1. Open a new terminal tab, navigate to the client folder, and install dependencies:
+   ```bash
+   cd client
+   npm install
+   ```
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Open `.env` and set:
+   ```env
+   VITE_API_URL=http://localhost:8000
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:5173` in your browser.
+
+---
+
+## 🚀 Deployment Guide
+
+### Backend & Database (Railway)
+1. Deploy a hosted PostgreSQL instance on Railway.
+2. Connect your GitHub repository and link the `server` directory as your web service root.
+3. Configure the variables:
+   * `PORT`: `8000`
+   * `GEMINI_API_KEY`: `your_key`
+   * `DATABASE_URL`: `${{Postgres.DATABASE_URL}}` (automatic link)
+4. Run `db/schema.sql` against the production database.
+5. Populate the production database by temporarily pointing your local `DATABASE_URL` to Railway's external link and running the seed scripts.
+6. Generate a public domain link on Railway (e.g. `https://medicine-price-finder-production.up.railway.app`).
+
+### Frontend (Vercel)
+1. Import your GitHub repository in Vercel.
+2. Set the root directory to `client`.
+3. Add the environment variable:
+   * `VITE_API_URL`: `https://your-railway-backend-domain.up.railway.app`
+4. Deploy the project. Vercel will build the React assets and launch the app.
+>>>>>>> 5d8f2c4 (removed emojis from ui)
