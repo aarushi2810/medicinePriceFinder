@@ -7,15 +7,24 @@ import ErrorBoundary from './components/ErrorBoundary';
 export default function App() {
   return (
     <BrowserRouter>
-      <div style={{ fontFamily: 'Inter, system-ui, sans-serif', minHeight: '100vh', background: '#fff' }}>
+      <div style={{
+        fontFamily: 'Inter, system-ui, sans-serif',
+        minHeight: '100vh',
+        background: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
         <Header />
         <ErrorBoundary>
-        <Routes>
-          <Route path="/"            element={<Search />} />
-          <Route path="/results/:id" element={<Results />} />
-          <Route path="*"            element={<Navigate to="/" />} />
-        </Routes>
+          <main style={{ flex: 1 }}>
+            <Routes>
+              <Route path="/"            element={<Search />} />
+              <Route path="/results/:id" element={<Results />} />
+              <Route path="*"            element={<Navigate to="/" />} />
+            </Routes>
+          </main>
         </ErrorBoundary>
+        <Footer />
       </div>
     </BrowserRouter>
   );
@@ -49,5 +58,25 @@ function Header() {
         }}>Govt. verified</span>
       </a>
     </nav>
+  );
+}
+
+function Footer() {
+  return (
+    <footer style={{
+      borderTop: '1px solid #eee',
+      padding: '24px',
+      color: '#888',
+      textAlign: 'center',
+      fontSize: 12,
+      lineHeight: 1.7,
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 4 }}>
+        MedPrice
+      </div>
+      <div>Compare medicine prices across pharmacies</div>
+      <div>Prices are for informational purposes only.</div>
+      <div style={{ marginTop: 6 }}>© 2026 MedPrice</div>
+    </footer>
   );
 }
