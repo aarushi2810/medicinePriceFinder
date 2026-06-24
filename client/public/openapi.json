@@ -1,0 +1,218 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MedPrice API",
+    "description": "Smart Medicine Price Comparison and Generic Alternative Finder API for India.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://medicine-price-finder.vercel.app/api",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:8000/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/medicines/search": {
+      "get": {
+        "summary": "Search medicines",
+        "description": "Search for medicines by brand name, generic/salt composition, or active ingredient.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query term"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of matching medicines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "brand_name": { "type": "string" },
+                      "dosage": { "type": "string" },
+                      "form": { "type": "string" },
+                      "salt_name": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/medicines/{id}/compare": {
+      "get": {
+        "summary": "Compare medicine prices",
+        "description": "Retrieve price comparison for a medicine across online pharmacies, and verify against NPPA ceiling price.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Unique medicine ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comparative pricing and regulation check results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "medicine": { "type": "object" },
+                    "prices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "pharmacy_name": { "type": "string" },
+                          "price": { "type": "number" },
+                          "mrp": { "type": "number" },
+                          "in_stock": { "type": "boolean" }
+                        }
+                      }
+                    },
+                    "nppa_ceiling_price": { "type": "number" },
+                    "overcharge_breaches": { "type": "array" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/medicines/{id}/generics": {
+      "get": {
+        "summary": "Get generic alternatives",
+        "description": "Get cheaper therapeutically equivalent generic alternative medicines based on salt composition and dosage form.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Unique medicine ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of equivalent generics with savings details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "brand_name": { "type": "string" },
+                      "price": { "type": "number" },
+                      "savings_percentage": { "type": "number" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/ocr": {
+      "post": {
+        "summary": "Prescription OCR scanner",
+        "description": "Extract medicine names and active ingredients from a scanned prescription photo.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "imageBase64": { "type": "string", "description": "Base64 encoded prescription image" },
+                  "mimeType": { "type": "string", "description": "Image MIME type" }
+                },
+                "required": ["imageBase64", "mimeType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted medicine names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "extracted_medicines": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/explain": {
+      "post": {
+        "summary": "Explain price variances",
+        "description": "Generate an AI explanation for medicine price differences across various pharmacies.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "medicineName": { "type": "string" },
+                  "prices": { "type": "array" }
+                },
+                "required": ["medicineName", "prices"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI explanation text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "explanation": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
