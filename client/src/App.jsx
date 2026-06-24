@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Search  from './pages/Search';
 import Results from './pages/Results';
-
 import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
