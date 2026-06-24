@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "medprice-search",
+      "type": "skill-md",
+      "description": "Search for medicines, compare prices across pharmacies, and find generic alternatives in India.",
+      "url": "https://medicine-price-finder.vercel.app/.well-known/agent-skills/medprice-search.md",
+      "digest": "sha256:404be63074eb86fe91302fe0bd6cc9fd4c9057554757e83b84d8ca8b2fb41d4f"
+    }
+  ]
+}

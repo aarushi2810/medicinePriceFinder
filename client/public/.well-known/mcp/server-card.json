@@ -1,0 +1,53 @@
+{
+  "serverInfo": {
+    "name": "MedPrice-MCP-Server",
+    "version": "1.0.0"
+  },
+  "endpoint": "https://medicine-price-finder.vercel.app/api/mcp",
+  "capabilities": {
+    "tools": [
+      {
+        "name": "search_medicines",
+        "description": "Search for medicines by brand name, generic/salt name, or active ingredient in India.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Medicine name or ingredient"
+            }
+          },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "compare_prices",
+        "description": "Compare medicine prices across pharmacies (1mg, Netmeds, PharmEasy, Apollo) and check DPCO/NPPA ceilings.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "medicineId": {
+              "type": "integer",
+              "description": "The unique database medicine ID"
+            }
+          },
+          "required": ["medicineId"]
+        }
+      },
+      {
+        "name": "get_generic_alternatives",
+        "description": "Get therapeutically equivalent generic alternatives for a given medicine.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "medicineId": {
+              "type": "integer",
+              "description": "The unique database medicine ID"
+            }
+          },
+          "required": ["medicineId"]
+        }
+      }
+    ]
+  }
+}

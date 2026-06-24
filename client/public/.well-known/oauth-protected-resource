@@ -1,0 +1,8 @@
+{
+  "resource": "https://medicine-price-finder.vercel.app/",
+  "authorization_servers": [
+    "https://medicine-price-finder.vercel.app/"
+  ],
+  "scopes_supported": ["read:medicines", "write:agents"],
+  "bearer_methods_supported": ["header"]
+}

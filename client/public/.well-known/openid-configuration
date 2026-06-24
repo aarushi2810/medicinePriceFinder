@@ -1,0 +1,11 @@
+{
+  "issuer": "https://medicine-price-finder.vercel.app/",
+  "authorization_endpoint": "https://medicine-price-finder.vercel.app/oauth/authorize",
+  "token_endpoint": "https://medicine-price-finder.vercel.app/api/oauth/token",
+  "userinfo_endpoint": "https://medicine-price-finder.vercel.app/api/userinfo",
+  "jwks_uri": "https://medicine-price-finder.vercel.app/.well-known/jwks.json",
+  "grant_types_supported": ["client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"],
+  "response_types_supported": ["code", "token"],
+  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": ["RS256"]
+}
