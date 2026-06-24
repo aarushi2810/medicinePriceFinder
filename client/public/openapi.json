@@ -5,17 +5,16 @@
     "description": "Smart Medicine Price Comparison and Generic Alternative Finder API for India.",
     "version": "1.0.0"
   },
- 
   "servers": [
-  {
-    "url": "https://medicinepricefinder.onrender.com/api",
-    "description": "Production Server"
-  },
-  {
-    "url": "http://localhost:8000/api",
-    "description": "Local Development Server"
-  }
-],
+    {
+      "url": "https://medicine-price-finder.vercel.app/api",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:8000/api",
+      "description": "Local Development Server"
+    }
+  ],
   "paths": {
     "/medicines/search": {
       "get": {
