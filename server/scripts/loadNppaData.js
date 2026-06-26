@@ -204,10 +204,15 @@ async function loadRetailPrices() {
 
         // Insert price under NPPA Standard pharmacy
         await db.query(`
-          INSERT INTO prices (medicine_id, pharmacy_id, price, mrp)
-          VALUES ($1, $2, $3, $3)
+          INSERT INTO prices (medicine_id, pharmacy_id, price, mrp, data_source, last_verified_at)
+          VALUES ($1, $2, $3, $3, 'NPPA', NOW())
           ON CONFLICT (medicine_id, pharmacy_id)
-          DO UPDATE SET price = EXCLUDED.price, updated_at = NOW()
+          DO UPDATE SET
+            price = EXCLUDED.price,
+            mrp = EXCLUDED.mrp,
+            data_source = 'NPPA',
+            last_verified_at = NOW(),
+            updated_at = NOW()
         `, [medId, nppaPharmacy, price]);
 
         priceInserted++;

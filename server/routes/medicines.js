@@ -2,6 +2,10 @@ const express  = require('express');
 const router   = express.Router();
 const db       = require('../db');
 const { cacheMiddleware } = require('../middleware/cache');
+const {
+  getGenericAlternatives,
+  getMedicineComparison,
+} = require('../services/medicineCompareService');
 
 router.get('/search', cacheMiddleware('search'), async (req, res) => {
   const { q } = req.query;
@@ -98,69 +102,13 @@ router.get('/:id/compare', cacheMiddleware('compare'), async (req, res) => {
   }
 
   try {
-    const medResult = await db.query(`
-      SELECT m.id, m.brand_name, m.dosage, m.form, s.salt_name, s.nppa_ceiling_price
-      FROM medicines m
-      JOIN salts s ON m.salt_id = s.id
-      WHERE m.id = $1
-    `, [id]);
-
-    if (medResult.rows.length === 0) {
+    const comparison = await getMedicineComparison(id);
+    if (!comparison) {
       return res.status(404).json({ error: 'Medicine not found' });
     }
 
-    const medicine = medResult.rows[0];
-    const nppaCeiling = parseFloat(medicine.nppa_ceiling_price) || null;
-
-    const priceResult = await db.query(`
-      SELECT
-        ph.id    AS pharmacy_id,
-        ph.name  AS pharmacy_name,
-        ph.type  AS pharmacy_type,
-        p.price,
-        p.mrp,
-        p.in_stock,
-        p.updated_at,
-        ROUND(((p.mrp - p.price) / NULLIF(p.mrp, 0)) * 100) AS discount_pct
-      FROM prices p
-      JOIN pharmacies ph ON p.pharmacy_id = ph.id
-      WHERE p.medicine_id = $1
-      ORDER BY p.price ASC
-    `, [id]);
-
-    const prices = priceResult.rows;
-
-    if (prices.length === 0) {
-      return res.json({ medicine, prices: [], summary: null, fromCache: false });
-    }
-
-    const cheapestPrice = parseFloat(prices[0].price);
-    const mostExpPrice  = parseFloat(prices[prices.length - 1].price);
-
-    const enriched = prices.map((p, i) => ({
-      ...p,
-      price:          parseFloat(p.price),
-      mrp:            parseFloat(p.mrp),
-      discount_pct:   parseInt(p.discount_pct) || 0,
-      vs_cheapest_pct: i === 0
-        ? 0
-        : Math.round(((parseFloat(p.price) - cheapestPrice) / cheapestPrice) * 100),
-      nppa_breach: (nppaCeiling && p.pharmacy_name !== 'NPPA Standard')
-        ? parseFloat(p.price) > nppaCeiling
-        : false,
-    }));
-
     const data = {
-      medicine,
-      prices:  enriched,
-      summary: {
-        cheapest_price:    cheapestPrice,
-        most_expensive:    mostExpPrice,
-        max_savings:       (mostExpPrice - cheapestPrice).toFixed(2),
-        pharmacy_count:    prices.length,
-        nppa_breach_count: enriched.filter(p => p.nppa_breach).length,
-        nppa_ceiling:      nppaCeiling,
-      },
+      ...comparison,
       fromCache: false,
     };
 
@@ -178,86 +126,7 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
   const { id } = req.params;
 
   try {
-    const target = await db.query(
-      `SELECT m.salt_id, m.form, m.dosage, s.salt_name
-       FROM medicines m
-       JOIN salts s ON m.salt_id = s.id
-       WHERE m.id = $1`, [id]
-    );
-    if (!target.rows.length) return res.json({ generics: [], fromCache: false });
-
-    const { salt_id, form, dosage, salt_name } = target.rows[0];
-    const targetStrength = parseFloat((dosage || '').match(/[\d.]+/)?.[0]);
-
-    // Pass 1: same salt_id, any form (not just exact form match)
-    let result = await db.query(`
-      SELECT
-        m.id, m.brand_name, m.dosage, m.form,
-        MIN(p.price) AS lowest_price,
-        COUNT(p.id)  AS available_at
-      FROM medicines m
-      LEFT JOIN prices p ON p.medicine_id = m.id
-      LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
-      WHERE
-        m.salt_id = $1
-        AND m.id   != $2
-        AND m.brand_name NOT LIKE '(%'
-        AND m.brand_name != 'NPPA Standard'
-        AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
-      GROUP BY m.id, m.brand_name, m.dosage, m.form
-      ORDER BY
-        CASE WHEN m.form = $3 THEN 0 ELSE 1 END,
-        lowest_price ASC NULLS LAST
-      LIMIT 25
-    `, [salt_id, id, form]);
-
-    // Pass 2: if few results, also try matching on base ingredient name
-    if (result.rows.length < 5 && salt_name) {
-      const baseIngredient = salt_name.trim().split(/[\s+(]/)[0];
-      if (baseIngredient && baseIngredient.length >= 3) {
-        const moreResults = await db.query(`
-          SELECT
-            m.id, m.brand_name, m.dosage, m.form,
-            MIN(p.price) AS lowest_price,
-            COUNT(p.id)  AS available_at
-          FROM medicines m
-          JOIN salts s ON m.salt_id = s.id
-          LEFT JOIN prices p ON p.medicine_id = m.id
-          LEFT JOIN pharmacies ph ON p.pharmacy_id = ph.id
-          WHERE
-            LOWER(s.salt_name) LIKE LOWER($1)
-            AND m.id != $2
-            AND m.brand_name NOT LIKE '(%'
-            AND m.brand_name != 'NPPA Standard'
-            AND (ph.name IS NULL OR ph.name != 'NPPA Standard')
-          GROUP BY m.id, m.brand_name, m.dosage, m.form
-          ORDER BY
-            CASE WHEN m.form = $3 THEN 0 ELSE 1 END,
-            lowest_price ASC NULLS LAST
-          LIMIT 25
-        `, [`${baseIngredient}%`, id, form]);
-
-        // Merge, avoiding duplicates
-        const existingIds = new Set(result.rows.map(r => r.id));
-        for (const row of moreResults.rows) {
-          if (!existingIds.has(row.id)) {
-            result.rows.push(row);
-            existingIds.add(row.id);
-          }
-        }
-      }
-    }
-
-    // Looser strength filter — allow up to 50% difference (was 20%)
-    const filtered = result.rows.filter(r => {
-      if (!targetStrength) return true;
-      const rowStrength = parseFloat((r.dosage || '').match(/[\d.]+/)?.[0]);
-      if (!rowStrength) return true;
-      const diff = Math.abs(rowStrength - targetStrength) / targetStrength;
-      return diff < 0.5;
-    });
-
-    const data = { generics: filtered, fromCache: false };
+    const data = { generics: await getGenericAlternatives(id), fromCache: false };
     if (res.setCache) res.setCache(data);
     res.json(data);
   } catch (err) {

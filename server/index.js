@@ -37,6 +37,13 @@ app.get('/api/health', (req, res) => {
 app.use('/api/medicines',  require('./routes/medicines'));
 app.use('/api/pharmacies', require('./routes/pharmacies'));
 app.use('/api/ai',         require('./routes/ai'));
+app.use('/api/admin',      require('./routes/admin'));
+app.use('/api/report',     require('./routes/report'));
+
+if (process.env.RUN_SCRAPER_CRON === 'true') {
+  const { startScraperCron } = require('./scrapers/cron');
+  startScraperCron();
+}
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });

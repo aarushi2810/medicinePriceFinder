@@ -1,83 +1,196 @@
-// ─── BaseScraper.js ──────────────────────────────────────────────────────────
-// Abstract base class for pharmacy scrapers.
-// Includes: rate limiting, retry with backoff, user-agent rotation, error logging
-// ─────────────────────────────────────────────────────────────────────────────
+// Base provider for compliant pharmacy price ingestion.
+//
+// The project intentionally does not scrape pharmacy websites. Concrete
+// providers either call a configured official/partner API or return explicit
+// opt-in mock data for local development and tests.
 
 const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  'MedPriceBot/1.0 (+https://medicine-price-finder.vercel.app)',
 ];
 
 class BaseScraper {
-  /**
-   * @param {string} name       – Scraper display name (e.g. 'PharmEasy')
-   * @param {string} baseUrl    – Base URL of the pharmacy site
-   * @param {object} options
-   * @param {number} options.rateLimit    – Min ms between requests (default 2000)
-   * @param {number} options.maxRetries   – Max retries per request  (default 3)
-   * @param {number} options.timeout      – Request timeout in ms    (default 10000)
-   */
   constructor(name, baseUrl, options = {}) {
     if (new.target === BaseScraper) {
-      throw new Error('BaseScraper is abstract — extend it in a subclass.');
+      throw new Error('BaseScraper is abstract; extend it in a provider.');
     }
 
-    this.name       = name;
-    this.baseUrl    = baseUrl;
-    this.rateLimit  = options.rateLimit  || 2000;
+    this.name = name;
+    this.baseUrl = baseUrl;
+    this.officialApiBaseUrl = options.officialApiBaseUrl || null;
+    this.apiKey = options.apiKey || null;
+    this.dataSource = options.dataSource || (this.officialApiBaseUrl ? 'API' : 'Seed');
+    this.enableMock = Boolean(options.enableMock);
+    this.mockCatalog = options.mockCatalog || {};
+    this.rateLimit = options.rateLimit || 500;
     this.maxRetries = options.maxRetries || 3;
-    this.timeout    = options.timeout    || 10000;
+    this.timeout = options.timeout || 10000;
 
     this._lastRequest = 0;
-    this._errorLog    = [];
+    this._errorLog = [];
   }
 
-  // ── Rate-limited fetch with retry + exponential backoff ──────────────────
+  async searchMedicine(query) {
+    if (this.officialApiBaseUrl) {
+      return this.searchOfficialApi(query);
+    }
+    if (this.enableMock) {
+      return this.searchMockCatalog(query);
+    }
+    return [];
+  }
+
+  async getMedicinePrice(medicineId) {
+    if (this.officialApiBaseUrl) {
+      return this.getOfficialPrice(medicineId);
+    }
+    if (this.enableMock) {
+      return this.getMockPrice(medicineId);
+    }
+    return null;
+  }
+
+  async run(medicines) {
+    const results = [];
+
+    for (const med of medicines) {
+      const started = Date.now();
+      const label = med.brand_name || med.name;
+
+      try {
+        const searchResults = await this.searchMedicine(label);
+        if (!searchResults.length) {
+          this._log(`${label} skipped: no compliant source result`);
+          continue;
+        }
+
+        const priceData = await this.getMedicinePrice(searchResults[0].id);
+        if (!priceData || priceData.price == null || priceData.mrp == null) {
+          this._log(`${label} skipped: no price returned`);
+          continue;
+        }
+
+        const updatedAt = priceData.updated_at || new Date().toISOString();
+        results.push({
+          medicine: med,
+          pharmacy: this.name,
+          price: Number(priceData.price),
+          mrp: Number(priceData.mrp),
+          availability: priceData.availability || (priceData.inStock ? 'in_stock' : 'out_of_stock'),
+          inStock: priceData.inStock ?? priceData.availability !== 'out_of_stock',
+          updated_at: updatedAt,
+          data_source: priceData.data_source || this.dataSource,
+          last_verified_at: updatedAt,
+          url: priceData.url || searchResults[0].url || this.baseUrl,
+        });
+
+        this._log(`${label} completed in ${Date.now() - started}ms`);
+      } catch (err) {
+        this._logError(label, err);
+        this._log(`${label} failed in ${Date.now() - started}ms: ${err.message}`);
+      }
+    }
+
+    return results;
+  }
+
+  isConfigured() {
+    return Boolean(this.officialApiBaseUrl || this.enableMock);
+  }
+
+  async searchOfficialApi(query) {
+    const url = new URL('/medicines/search', this.officialApiBaseUrl);
+    url.searchParams.set('q', query);
+    const data = await this.fetchJson(url.toString());
+
+    return (data.results || data.medicines || []).map(item => ({
+      id: item.id || item.sku || item.slug,
+      name: item.name || item.brand_name,
+      url: item.url,
+    })).filter(item => item.id);
+  }
+
+  async getOfficialPrice(medicineId) {
+    const url = new URL(`/medicines/${encodeURIComponent(medicineId)}/price`, this.officialApiBaseUrl);
+    const data = await this.fetchJson(url.toString());
+    return this.normalizeOfficialPrice(data);
+  }
+
+  normalizeOfficialPrice(data) {
+    const payload = data.price ? data : data.data || data;
+    return {
+      price: payload.price,
+      mrp: payload.mrp,
+      availability: payload.availability,
+      inStock: payload.in_stock ?? payload.inStock,
+      updated_at: payload.updated_at || payload.updatedAt,
+      data_source: payload.data_source || payload.dataSource || this.dataSource,
+      url: payload.url,
+    };
+  }
+
+  searchMockCatalog(query) {
+    const normalized = this._normalizeName(query);
+    const item = this.mockCatalog[normalized];
+    if (!item) return [];
+    return [{ id: normalized, name: query, url: item.url }];
+  }
+
+  getMockPrice(medicineId) {
+    const item = this.mockCatalog[medicineId];
+    if (!item) return null;
+    return {
+      price: item.price,
+      mrp: item.mrp,
+      availability: item.availability || 'in_stock',
+      inStock: item.inStock ?? true,
+      updated_at: item.updated_at || new Date().toISOString(),
+      data_source: item.data_source || 'Seed',
+      url: item.url,
+    };
+  }
+
+  async fetchJson(url) {
+    const data = await this.fetchPage(url);
+    if (typeof data === 'string') {
+      return JSON.parse(data);
+    }
+    return data;
+  }
+
   async fetchPage(url) {
-    // Enforce rate limit
     const elapsed = Date.now() - this._lastRequest;
     if (elapsed < this.rateLimit) {
-      await new Promise(r => setTimeout(r, this.rateLimit - elapsed));
+      await new Promise(resolve => setTimeout(resolve, this.rateLimit - elapsed));
     }
 
     let lastError;
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         this._lastRequest = Date.now();
-
         const controller = new AbortController();
-        const timeoutId  = setTimeout(() => controller.abort(), this.timeout);
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
         const response = await fetch(url, {
           signal: controller.signal,
           headers: {
-            'User-Agent': this._randomUserAgent(),
-            'Accept':     'text/html,application/json',
+            'User-Agent': USER_AGENTS[0],
+            'Accept': 'application/json',
+            ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
           },
         });
 
         clearTimeout(timeoutId);
-
         if (!response.ok) {
           throw new Error(`HTTP ${response.status} from ${url}`);
         }
 
         const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          return await response.json();
-        }
-        return await response.text();
-
+        return contentType.includes('application/json') ? response.json() : response.text();
       } catch (err) {
         lastError = err;
-        this._log(`Attempt ${attempt}/${this.maxRetries} failed for ${url}: ${err.message}`);
-
         if (attempt < this.maxRetries) {
-          const backoff = Math.pow(2, attempt) * 500 + Math.random() * 500;
-          await new Promise(r => setTimeout(r, backoff));
+          const backoff = Math.pow(2, attempt) * 500;
+          await new Promise(resolve => setTimeout(resolve, backoff));
         }
       }
     }
@@ -86,72 +199,18 @@ class BaseScraper {
     throw lastError;
   }
 
-  // ── Abstract methods — subclasses MUST override these ────────────────────
-
-  /**
-   * Search for a medicine by name on the pharmacy site.
-   * @param {string} query
-   * @returns {Promise<Array>} list of search results
-   */
-  async searchMedicine(query) {
-    throw new Error(`${this.name}: searchMedicine() not implemented`);
+  _normalizeName(value) {
+    return String(value || '').trim().toLowerCase();
   }
 
-  /**
-   * Get the price of a specific medicine.
-   * @param {string} medicineId – site-specific ID
-   * @returns {Promise<object>} { price, mrp, inStock }
-   */
-  async getMedicinePrice(medicineId) {
-    throw new Error(`${this.name}: getMedicinePrice() not implemented`);
+  _log(message) {
+    console.log(`[${this.name}] ${message}`);
   }
 
-  // ── Orchestrator — run scraping for a list of medicines ──────────────────
-  async run(medicines) {
-    console.log(`\n[${this.name}] Starting scrape for ${medicines.length} medicines...`);
-    const results = [];
-
-    for (const med of medicines) {
-      try {
-        const searchResults = await this.searchMedicine(med.brand_name || med.name);
-        if (searchResults && searchResults.length > 0) {
-          const priceData = await this.getMedicinePrice(searchResults[0].id);
-          results.push({
-            medicine:    med,
-            pharmacy:    this.name,
-            ...priceData,
-            scrapedAt:   new Date().toISOString(),
-          });
-          console.log(`  ✓ ${med.brand_name || med.name}: ₹${priceData.price}`);
-        } else {
-          console.log(`  ⚠ ${med.brand_name || med.name}: not found`);
-        }
-      } catch (err) {
-        console.error(`  ✗ ${med.brand_name || med.name}: ${err.message}`);
-      }
-    }
-
-    console.log(`[${this.name}] Done. ${results.length}/${medicines.length} prices scraped.`);
-    if (this._errorLog.length) {
-      console.log(`[${this.name}] ${this._errorLog.length} errors logged.`);
-    }
-    return results;
-  }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  _randomUserAgent() {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-  }
-
-  _log(msg) {
-    console.log(`[${this.name}] ${msg}`);
-  }
-
-  _logError(url, error) {
+  _logError(target, error) {
     this._errorLog.push({
-      url,
-      error:     error.message,
+      target,
+      error: error.message,
       timestamp: new Date().toISOString(),
     });
   }

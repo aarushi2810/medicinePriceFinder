@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"No tests configured\""
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/loadNppaData.js && node scripts/addBatch38.js && node scripts/quickSeed.js",
+    "scrape": "node scrapers/runAll.js",
+    "test": "node --test"
   },
   "keywords": [
     "express",

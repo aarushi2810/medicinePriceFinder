@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Search  from './pages/Search';
 import Results from './pages/Results';
+import Report from './pages/Report';
 import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
             <Routes>
               <Route path="/"            element={<Search />} />
               <Route path="/results/:id" element={<Results />} />
+              <Route path="/report"       element={<Report />} />
               <Route path="*"            element={<Navigate to="/" />} />
             </Routes>
           </main>
@@ -55,6 +57,9 @@ function Header() {
           background: '#E1F5EE', color: '#085041',
           borderRadius: 20, fontWeight: 500,
         }}>Govt. verified</span>
+      </a>
+      <a href="/report" style={{ marginLeft: 'auto', color: '#555', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+        Savings Report
       </a>
     </nav>
   );

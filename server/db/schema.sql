@@ -43,6 +43,10 @@ CREATE TABLE prices (
   mrp          NUMERIC(10,2) NOT NULL,
   in_stock     BOOLEAN   DEFAULT true,
   updated_at   TIMESTAMP DEFAULT NOW(),
+  source_url   TEXT,
+  data_source  VARCHAR(20) NOT NULL DEFAULT 'Seed'
+    CHECK (data_source IN ('NPPA', 'API', 'Partner', 'Seed', 'Manual')),
+  last_verified_at TIMESTAMP,
   UNIQUE(medicine_id, pharmacy_id)
 );
 
@@ -62,6 +66,19 @@ CREATE TABLE watchlist (
   target_price NUMERIC(10,2) NOT NULL,
   created_at   TIMESTAMP DEFAULT NOW(),
   UNIQUE(user_email, medicine_id)
+);
+
+CREATE TABLE scraper_provider_status (
+  provider_name VARCHAR(100) PRIMARY KEY,
+  status VARCHAR(30) NOT NULL DEFAULT 'never_run',
+  last_successful_scrape TIMESTAMP,
+  last_failed_scrape TIMESTAMP,
+  last_error TEXT,
+  last_run TIMESTAMP,
+  medicines_processed INTEGER NOT NULL DEFAULT 0,
+  prices_updated INTEGER NOT NULL DEFAULT 0,
+  errors INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Standard indexes

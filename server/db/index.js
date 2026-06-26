@@ -24,14 +24,16 @@ const pool = new Pool(
       }
 );
 
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('DB connection failed:', err.message);
-    process.exit(1);
-  }
+if (process.env.NODE_ENV !== 'test') {
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('DB connection failed:', err.message);
+      process.exit(1);
+    }
 
-  console.log('PostgreSQL connected');
-  release();
-});
+    console.log('PostgreSQL connected');
+    release();
+  });
+}
 
 module.exports = pool;

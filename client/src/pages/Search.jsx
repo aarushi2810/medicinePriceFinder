@@ -252,7 +252,7 @@ export default function Search() {
           {[
             { n: `${Number(stats.total_medicines).toLocaleString()}+`, label: 'Medicines tracked' },
             { n: stats.ceiling_prices, label: 'Govt. ceiling prices', sub: 'DPCO regulated' },
-            { n: stats.medicines_with_live_prices, label: 'With live comparison',
+            { n: stats.medicines_with_live_prices, label: 'With price comparison',
               color: stats.medicines_with_live_prices > 30 ? '#1D9E75' : '#888' },
           ].map(s => (
             <div key={s.label}>
@@ -265,7 +265,7 @@ export default function Search() {
       )}
 
       <p style={{ fontSize: 11, color: '#aaa', marginTop: 12, textAlign: 'center' }}>
-        Ceiling prices are set by the government under the Drug Price Control Order (DPCO). Live comparison shows actual prices across 1mg, Netmeds, PharmEasy & Apollo.
+        Ceiling prices are set by the government under the Drug Price Control Order (DPCO). Pharmacy comparisons include source and freshness labels when available.
       </p>
     </div>
   );

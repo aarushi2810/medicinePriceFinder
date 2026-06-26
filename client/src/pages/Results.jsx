@@ -29,6 +29,13 @@ import { getCompositionText } from '../utils/parseMedicineName';
 function formatPrice(val) {
   return parseFloat(val || 0).toFixed(2);
 }
+
+function formatDate(val) {
+  if (!val) return null;
+  const date = new Date(val);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-IN');
+}
  
 // ─── Main Results page ────────────────────────────────────────────────────────
  
@@ -83,6 +90,8 @@ export default function Results() {
 
   const isNppaOnly = prices.length === 1 && prices[0]?.pharmacy_name === 'NPPA Standard';
   const hasMultipleSources = prices.length > 1;
+  const verifiedSourceCount = prices.filter(p => ['API', 'Partner', 'NPPA', 'Manual'].includes(p.data_source)).length;
+  const seedSourceCount = prices.filter(p => p.data_source === 'Seed').length;
   const showMaxSavings = parseFloat(summary?.max_savings) > 0;
  
   return (
@@ -203,7 +212,7 @@ export default function Results() {
   </div>
 )}
 
-{hasMultipleSources && (
+{hasMultipleSources && verifiedSourceCount > 0 && (
   <div style={{
     padding: '8px 14px', background: '#E1F5EE',
     border: '1px solid #6ee7b7', borderRadius: 8,
@@ -211,7 +220,19 @@ export default function Results() {
     display: 'flex', alignItems: 'center', gap: 8,
   }}>
     <CheckCircle size={16} />
-    <span><strong>Live comparison available</strong> — prices verified across {prices.length} sources</span>
+    <span><strong>Verified comparison available</strong> — {verifiedSourceCount} verified {verifiedSourceCount === 1 ? 'source' : 'sources'}</span>
+  </div>
+)}
+
+{hasMultipleSources && verifiedSourceCount === 0 && seedSourceCount > 0 && (
+  <div style={{
+    padding: '8px 14px', background: '#fffbeb',
+    border: '1px solid #fde68a', borderRadius: 8,
+    fontSize: 13, color: '#92400e', marginBottom: 16,
+    display: 'flex', alignItems: 'center', gap: 8,
+  }}>
+    <ClipboardList size={16} />
+    <span><strong>Seed data comparison</strong> — sample prices, not live pharmacy updates</span>
   </div>
 )}
 
@@ -296,6 +317,9 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
   const [explaining,  setExplaining]  = useState(false);
   const isOnline = price.pharmacy_type === 'online';
   const breach   = price.nppa_breach;
+  const isSeedData = price.data_source === 'Seed';
+  const verifiedDate = formatDate(price.last_verified_at);
+  const freshness = price.freshness_status || 'Unknown';
  
   const handleExplain = async () => {
     setExplaining(true);
@@ -341,11 +365,14 @@ function PriceCard({ price, isCheapest, medicine, cheapestPrice, avgPrice }) {
               </span>
               {isCheapest && <Pill text="Cheapest" color="#085041" bg="#E1F5EE" icon={<CheckCircle size={11} />} />}
               {breach      && <Pill text="Above ceiling price" color="#A32D2D" bg="#fde8e8" icon={<AlertTriangle size={11} />} />}
+              {isSeedData && <Pill text="Seed Data" color="#7d4e00" bg="#fffbeb" icon={<ClipboardList size={11} />} />}
             </div>
             <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>
               {price.in_stock ? 'In stock' : 'Out of stock'}
               {price.discount_pct > 0 && ` · ${price.discount_pct}% off MRP`}
-              {price.updated_at && ` · ${new Date(price.updated_at).toLocaleDateString('en-IN')}`}
+              {` · ${price.source_label || price.data_source || 'Unknown'}`}
+              {` · ${freshness}`}
+              {verifiedDate && ` · verified ${verifiedDate}`}
             </div>
           </div>
         </div>

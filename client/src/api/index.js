@@ -38,3 +38,13 @@ export const explainPrice = async (payload) => {
   if (!res.ok) throw new Error('Explain failed');
   return res.json();
 };
+
+export const generateReport = async (medicines) => {
+  const res = await fetch(`${BASE}/api/report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ medicines }),
+  });
+  if (!res.ok) throw new Error('Report failed');
+  return res.json();
+};

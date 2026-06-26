@@ -324,10 +324,15 @@ async function main() {
     for (const p of drug.prices) {
       const pharmId = await getOrCreatePharmacy(p.ph);
       await db.query(`
-        INSERT INTO prices (medicine_id, pharmacy_id, price, mrp, updated_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO prices (medicine_id, pharmacy_id, price, mrp, updated_at, data_source, last_verified_at)
+        VALUES ($1, $2, $3, $4, NOW(), 'Seed', NULL)
         ON CONFLICT (medicine_id, pharmacy_id)
-        DO UPDATE SET price = EXCLUDED.price, mrp = EXCLUDED.mrp, updated_at = NOW()
+        DO UPDATE SET
+          price = EXCLUDED.price,
+          mrp = EXCLUDED.mrp,
+          data_source = 'Seed',
+          last_verified_at = NULL,
+          updated_at = NOW()
       `, [medId, pharmId, p.p, p.m]);
       await db.query(`
         INSERT INTO price_history (medicine_id, pharmacy_id, price, recorded_on)

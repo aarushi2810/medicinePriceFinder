@@ -1,42 +1,23 @@
-// ─── PharmEasyScraper.js ─────────────────────────────────────────────────────
-// Scraper stub for PharmEasy — requires ToS compliance before implementation
-// ─────────────────────────────────────────────────────────────────────────────
-
 const BaseScraper = require('./BaseScraper');
+
+const MOCK_CATALOG = {
+  crocin: { price: 27.80, mrp: 32.00, url: 'mock://pharmeasy/crocin' },
+  dolo: { price: 22.80, mrp: 28.00, url: 'mock://pharmeasy/dolo' },
+  calpol: { price: 24.90, mrp: 30.00, url: 'mock://pharmeasy/calpol' },
+};
 
 class PharmEasyScraper extends BaseScraper {
   constructor(options = {}) {
-    super('PharmEasy', 'https://pharmeasy.in', options);
-  }
-
-  async searchMedicine(query) {
-    console.log(`[${this.name}] searchMedicine('${query}') — Not implemented, requires ToS compliance`);
-    return [];
-
-    // ── Example of what this WOULD look like ─────────────────────────────
-    // const url = `${this.baseUrl}/api/search/search?query=${encodeURIComponent(query)}`;
-    // const data = await this.fetchPage(url);
-    // return (data.data?.products || []).map(p => ({
-    //   id:    p.slug,
-    //   name:  p.name,
-    //   price: p.salePriceDecimal,
-    //   mrp:   p.maximumRetailPrice,
-    // }));
-  }
-
-  async getMedicinePrice(medicineId) {
-    console.log(`[${this.name}] getMedicinePrice('${medicineId}') — Not implemented, requires ToS compliance`);
-    return { price: null, mrp: null, inStock: false };
-
-    // ── Example of what this WOULD look like ─────────────────────────────
-    // const url = `${this.baseUrl}/api/otc/${medicineId}`;
-    // const data = await this.fetchPage(url);
-    // const product = data.data;
-    // return {
-    //   price:   product.salePriceDecimal,
-    //   mrp:     product.maximumRetailPrice,
-    //   inStock: product.isInStock,
-    // };
+    const officialApiBaseUrl = options.officialApiBaseUrl || process.env.PHARMEASY_API_BASE_URL;
+    const enableMock = options.enableMock ?? process.env.ENABLE_MOCK_PRICE_PROVIDERS === 'true';
+    super('PharmEasy', 'https://pharmeasy.in', {
+      officialApiBaseUrl,
+      apiKey: options.apiKey || process.env.PHARMEASY_API_KEY,
+      dataSource: options.dataSource || process.env.PHARMEASY_DATA_SOURCE || (officialApiBaseUrl ? 'API' : 'Seed'),
+      enableMock,
+      mockCatalog: options.mockCatalog || MOCK_CATALOG,
+      ...options,
+    });
   }
 }
 

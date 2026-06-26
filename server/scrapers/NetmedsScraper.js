@@ -1,43 +1,23 @@
-// ─── NetmedsScraper.js ───────────────────────────────────────────────────────
-// Scraper stub for Netmeds — requires ToS compliance before implementation
-// ─────────────────────────────────────────────────────────────────────────────
-
 const BaseScraper = require('./BaseScraper');
+
+const MOCK_CATALOG = {
+  crocin: { price: 30.00, mrp: 32.00, url: 'mock://netmeds/crocin' },
+  dolo: { price: 25.00, mrp: 28.00, url: 'mock://netmeds/dolo' },
+  calpol: { price: 27.00, mrp: 30.00, url: 'mock://netmeds/calpol' },
+};
 
 class NetmedsScraper extends BaseScraper {
   constructor(options = {}) {
-    super('Netmeds', 'https://www.netmeds.com', options);
-  }
-
-  async searchMedicine(query) {
-    console.log(`[${this.name}] searchMedicine('${query}') — Not implemented, requires ToS compliance`);
-    return [];
-
-    // ── Example of what this WOULD look like ─────────────────────────────
-    // const url = `${this.baseUrl}/catalogsearch/result?q=${encodeURIComponent(query)}`;
-    // const html = await this.fetchPage(url);
-    // // Parse HTML for product cards — would use cheerio or similar
-    // // return products.map(p => ({
-    // //   id:    p.productId,
-    // //   name:  p.productName,
-    // //   price: p.finalPrice,
-    // //   mrp:   p.mrp,
-    // // }));
-    // return [];
-  }
-
-  async getMedicinePrice(medicineId) {
-    console.log(`[${this.name}] getMedicinePrice('${medicineId}') — Not implemented, requires ToS compliance`);
-    return { price: null, mrp: null, inStock: false };
-
-    // ── Example of what this WOULD look like ─────────────────────────────
-    // const url = `${this.baseUrl}/api/v1/product/${medicineId}`;
-    // const data = await this.fetchPage(url);
-    // return {
-    //   price:   data.final_price,
-    //   mrp:     data.mrp,
-    //   inStock: data.is_available,
-    // };
+    const officialApiBaseUrl = options.officialApiBaseUrl || process.env.NETMEDS_API_BASE_URL;
+    const enableMock = options.enableMock ?? process.env.ENABLE_MOCK_PRICE_PROVIDERS === 'true';
+    super('Netmeds', 'https://www.netmeds.com', {
+      officialApiBaseUrl,
+      apiKey: options.apiKey || process.env.NETMEDS_API_KEY,
+      dataSource: options.dataSource || process.env.NETMEDS_DATA_SOURCE || (officialApiBaseUrl ? 'API' : 'Seed'),
+      enableMock,
+      mockCatalog: options.mockCatalog || MOCK_CATALOG,
+      ...options,
+    });
   }
 }
 
