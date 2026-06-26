@@ -14,7 +14,7 @@ router.post('/', async (req, res) => {
     res.json(report);
   } catch (err) {
     console.error('Report generation error:', err.message);
-    res.status(500).json({ error: 'Report generation failed' });
+    res.status(500).json({ error: 'Report generation failed', message: err.message });
   }
 });
 

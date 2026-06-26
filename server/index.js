@@ -3,6 +3,8 @@ const cors      = require('cors');
 const helmet    = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const { runMigrations } = require('./scripts/migrate');
+
 
 const app = express();
 
@@ -56,4 +58,18 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+async function startServer() {
+  try {
+    console.log('Running database migrations...');
+    await runMigrations();
+    console.log('Database migrations completed successfully.');
+  } catch (err) {
+    console.error('Database migration failed on startup:', err.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+startServer();

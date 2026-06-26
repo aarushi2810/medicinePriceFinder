@@ -91,7 +91,7 @@ router.get('/search', cacheMiddleware('search'), async (req, res) => {
 
   } catch (err) {
     console.error('Search error:', err.message);
-    res.status(500).json({ error: 'Search failed' });
+    res.status(500).json({ error: 'Search failed', message: err.message });
   }
 });
 router.get('/:id/compare', cacheMiddleware('compare'), async (req, res) => {
@@ -117,7 +117,7 @@ router.get('/:id/compare', cacheMiddleware('compare'), async (req, res) => {
 
   } catch (err) {
     console.error('Compare error:', err.message);
-    res.status(500).json({ error: 'Compare failed' });
+    res.status(500).json({ error: 'Compare failed', message: err.message });
   }
 });
 
@@ -131,7 +131,7 @@ router.get('/:id/generics', cacheMiddleware('generics'), async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Generics error:', err.message);
-    res.status(500).json({ error: 'Generics lookup failed' });
+    res.status(500).json({ error: 'Generics lookup failed', message: err.message });
   }
 });
 

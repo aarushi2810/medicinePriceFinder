@@ -204,7 +204,7 @@ router.get('/by-pincode', async (req, res) => {
 
   } catch (err) {
     console.error('By-pincode error:', err.message);
-    res.status(500).json({ error: 'Pincode pharmacy search failed' });
+    res.status(500).json({ error: 'Pincode pharmacy search failed', message: err.message });
   }
 });
 
