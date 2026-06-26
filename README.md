@@ -122,11 +122,11 @@ Price data is kept up-to-date via a scraper pipeline supporting:
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: React (Vite), React Router v7, Leaflet (Maps), Lucide Icons, CSS-in-JS
+* **Frontend**: React (Vite), React Router v7, Leaflet (Maps), Lucide Icons, CSS
 * **Backend**: Node.js, Express 5, PostgreSQL, In-memory Node Cache (5-min TTL)
 * **AI & External APIs**: Google Gemini API (OCR + AI Price Explainer), OpenStreetMap Overpass API, Nominatim Geocoding
 * **Scraping**: Playwright, Puppeteer with stealth plugins
-* **Deployment**: Frontend on Vercel, Backend & Database on Railway
+* **Deployment**: Frontend on Vercel, Backend & Database on Render
 
 ---
 
@@ -193,7 +193,7 @@ GEMINI_API_KEY=your_gemini_api_key
 
 Initialize the database and start:
 ```bash
-npm run migrate         # run database migrations
+npm run migrate         # run database migrations (runs automatically on startup too)
 npm run seed            # seed NPPA data and pharmacy prices
 npm run scrape          # run the scraper pipeline
 npm start               # starts on :8000
@@ -220,23 +220,24 @@ npm run dev             # starts on :5173
 
 ## 🚀 Deployment Guide
 
-### Backend & Database (Railway)
-1. Deploy a hosted PostgreSQL instance on Railway.
-2. Connect your GitHub repository and link the `server` directory as your web service root.
-3. Configure the variables:
+### Backend & Database (Render)
+1. Provision a PostgreSQL Database on Render.
+2. Deploy a web service on Render, linking your GitHub repository and setting the **Root Directory** to `server`.
+3. Set the build command to `npm install` and the start command to `npm start`.
+4. Configure environment variables in Render:
    * `PORT`: `8000`
-   * `GEMINI_API_KEY`: `your_key`
-   * `DATABASE_URL`: `${{Postgres.DATABASE_URL}}` (automatic link)
-4. Run `npm run migrate` against the production database.
-5. Populate the production database with the seed scripts.
-6. Generate a public domain link on Railway.
+   * `DATABASE_URL`: `your_render_postgresql_connection_string`
+   * `GEMINI_API_KEY`: `your_gemini_api_key`
+   * `RUN_SCRAPER_CRON`: `true` (optional, for scheduled runs)
+5. Save and deploy. Database migrations run automatically on server start.
+6. Seed the production database using Render Shell or locally via connection string (e.g. `DATABASE_URL=... npm run seed`).
 
 ### Frontend (Vercel)
 1. Import your GitHub repository in Vercel.
-2. Set the root directory to `client`.
-3. Add the environment variable:
-   * `VITE_API_URL`: `https://your-railway-backend-domain.up.railway.app`
-4. Deploy the project.
+2. Set the **Root Directory** to `client`.
+3. Configure the environment variable:
+   * `VITE_API_URL`: `https://medicinepricefinder.onrender.com`
+4. Deploy the project. The build configuration in [vercel.json](file:///Users/aarushi/Desktop/medicine-price-finder/vercel.json) will automatically handle route rewrites to `index.html` to support React Router SPA paths (e.g., `/report`).
 
 ---
 
@@ -267,8 +268,10 @@ medicine-price-finder/
 │   │   │   └── reportPdf.js            # Client-side PDF generation
 │   │   └── api/
 │   │       └── index.js                # API client
+│   ├── vercel.json                     # Vercel routing configs (client root)
 │   └── package.json
 │
+├── vercel.json                         # Vercel routing configs (monorepo root)
 └── server/
     ├── routes/
     │   ├── medicines.js                # Search, compare, generics, stats
